@@ -6,6 +6,32 @@ import seaborn as sns
 import numpy as np
 from pathlib import Path
 from scipy import stats
+import plotly.express as px
+from scipy.stats import pearsonr
+
+@st.cache_data
+def load_data():
+    df = pd.read_csv("merged_companies_housing.csv")
+    
+    # FIX: Create year_int globally so all tabs can see it
+    df['year_int'] = pd.to_datetime(df['date']).dt.year 
+    
+    # FIX: Ensure city names are strings to prevent sorting crashes
+    df['city_x'] = df['city_x'].fillna("Unknown").astype(str)
+    
+    # FIX: Remove rows with no growth data to prevent math errors
+    df = df.dropna(subset=['pct_change'])
+    
+    return df
+
+# Initialize with Error Handling
+try:
+    merged_companies_housing = load_data()
+except FileNotFoundError:
+    st.error("File 'merged_companies_housing.csv' not found. Check your folder path.")
+    st.stop()
+
+
 
 # Sidebar navigation
 st.sidebar.title("FirmScape Dashboard")
@@ -92,6 +118,8 @@ if tab == "🧩 Build the Dataset":
     ]
     })
     st.dataframe(pipeline_data.head(9), height=500, width=900)
+
+# --- FIND THIS SECTION IN YOUR CODE UNDER TAB 3: EVIDENCE ---
 if tab == "🔎 Evidence":
     st.title("What patterns show up across cities?")
     st.markdown("Explore the relationship between industrial clustering and urban housing value.")
@@ -209,4 +237,203 @@ if tab == "🔎 Evidence":
         plt.axvspan(inflection_year, inflection_year+3, color='yellow', alpha=0.3, label="Acceleration Window")
         plt.legend()
         st.pyplot(fig)
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+if tab == "✅ Validation":
+    st.title("✅ Statistical Validation")
+    st.markdown("Prove the relationship between industry shifts and housing value with statistical rigor.")
+
+    # --- 1. HYPOTHESIS SELECTION ---
+    st.subheader("Step 1: Choose a Hypothesis")
+    hypothesis = st.selectbox(
+        "What relationship are we testing?",
+        [
+            "Does industry growth lead housing growth?",
+            "Do concentrated cities have higher housing volatility?",
+            "Do diverse cities grow more steadily?"
+        ]
+    )
     
+
+if tab == "✅ Validation":
+    st.title("✅ Statistical Validation")
+    st.markdown("Prove rigor (p-values, lagged relationships) while being simple enough to defend live.")
+
+    # --- 1. CHOOSE A HYPOTHESIS ---
+    st.subheader("Step 1: Choose a Hypothesis")
+    hypothesis = st.selectbox(
+        "What relationship are we testing?",
+        [
+            "Does industry growth lead housing growth?",
+            "Do concentrated cities have higher housing volatility?",
+            "Do diverse cities grow more steadily?"
+        ],
+        key="hyp_selector"
+    )
+
+    # --- 2. LAG TESTING TOOL ---
+    st.subheader("Step 2: Lag & Significance Testing")
+    col_v1, col_v2 = st.columns([1, 2])
+    
+    with col_v1:
+        lag_years = st.slider("Lag Housing Data by (Years):", 0, 3, 1, key="lag_slider")
+        sig_filter = st.toggle("Show only significant results (p < 0.05)", value=True, key="sig_toggle")
+
+    # Processing Lags: Shift housing data backward to see if industry leads it
+    val_df = merged_companies_housing.copy()
+    val_df = val_df.sort_values(['city_x', 'year_int'])
+    val_df['lagged_housing'] = val_df.groupby('city_x')['pct_change'].shift(-lag_years)
+    clean_val = val_df.dropna(subset=['lagged_housing', 'pct_change'])
+
+    # Global Statistics Calculation
+    if not clean_val.empty:
+        slope, intercept, r_val, p_val, std_err = stats.linregress(clean_val['pct_change'], clean_val['lagged_housing'])
+        
+        with col_v2:
+            st.write(f"**Lag Results for {lag_years} Year(s):**")
+            # Only show meaningful relationships if toggle is on
+            if sig_filter and p_val >= 0.05:
+                st.warning("No statistically significant relationship found for this lag.")
+            else:
+                metric_col1, metric_col2 = st.columns(2)
+                metric_col1.metric("Correlation (R)", f"{r_val:.3f}")
+                metric_col2.metric("P-Value", f"{p_val:.4f}")
+                st.write(f"Sample Size: **{len(clean_val)} data points**")
+
+    # --- 3. PRACTICAL SIGNIFICANCE CHECK ---
+    st.divider()
+    st.subheader("Step 3: Practical Significance Check")
+    if not clean_val.empty and (not sig_filter or p_val < 0.05):
+        # Translate effect size into plain English
+        st.info(f"""
+        **The 'So What?' Factor:** A **10% increase** in company growth is associated with a 
+        **{10 * slope:.2f}%** change in housing growth **{lag_years} year(s)** later.
+        *(Note: This indicates association, not direct causation)*.
+        """)
+
+    # --- 4. COMPARE 2 CITIES (Side-by-Side) ---
+    st.divider()
+    st.subheader("Step 4: Compare 2 Cities")
+    
+    all_cities = sorted(clean_val['city_x'].unique())
+    comp_a, comp_b = st.columns(2)
+
+    with comp_a:
+        city_a = st.selectbox("Choose City A", all_cities, index=0, key="val_city_a")
+        data_a = clean_val[clean_val['city_x'] == city_a]
+        if len(data_a) >= 2:
+            r_a, p_a = stats.pearsonr(data_a['pct_change'], data_a['lagged_housing'])
+            st.metric(f"{city_a} Lag Correlation", f"{r_a:.2f}")
+            st.write(f"P-value: {p_a:.4f}")
+        else:
+            st.warning(f"Insufficient data for {city_a}")
+
+    with comp_b:
+        city_b = st.selectbox("Choose City B", all_cities, index=min(1, len(all_cities)-1), key="val_city_b")
+        data_b = clean_val[clean_val['city_x'] == city_b]
+        if len(data_b) >= 2:
+            r_b, p_b = stats.pearsonr(data_b['pct_change'], data_b['lagged_housing'])
+            st.metric(f"{city_b} Lag Correlation", f"{r_b:.2f}")
+            st.write(f"P-value: {p_b:.4f}")
+        else:
+            st.warning(f"Insufficient data for {city_b}")
+
+
+
+
+
+if tab == "🚀 Opportunity Lab":
+    st.title("🚀 Opportunity Lab: The 'Next Hub' Finder")
+    st.markdown("Build your own investment shortlist by weighting the economic signals that matter most to you.")
+
+    # --- 1. WEIGHT SLIDERS (The Magic) ---
+    with st.sidebar:
+        st.header("⚖️ Strategy Weights")
+        w_growth = st.slider("Company Growth", 0.0, 1.0, 0.4)
+        w_diversity = st.slider("Industry Diversity", 0.0, 1.0, 0.3)
+        w_afford = st.slider("Housing Affordability", 0.0, 1.0, 0.2)
+        w_stability = st.slider("Price Stability", 0.0, 1.0, 0.1)
+        
+        st.divider()
+        lookback = st.slider("Analysis Window (Years)", 1, 5, 3)
+
+    # --- 2. THE SCORE FORMULA ---
+    # We normalize factors 0-1 to keep the scoring transparent and interpretable
+    opp_df = merged_companies_housing.copy()
+    
+    # Simple proxies for demo purposes:
+    # Growth = pct_change, Stability = 1/std_dev, Affordability = inverse of housing index
+    city_stats = opp_df.groupby('city_x').agg({
+        'pct_change': 'mean',
+        'industry': 'nunique',
+        'year_int': 'count'
+    }).rename(columns={'pct_change': 'growth', 'industry': 'diversity'})
+
+    # Normalization (Min-Max Scaling)
+    for col in ['growth', 'diversity']:
+        city_stats[col + '_norm'] = (city_stats[col] - city_stats[col].min()) / (city_stats[col].max() - city_stats[col].min())
+
+    # Calculate Score
+    city_stats['Final_Score'] = (
+        (city_stats['growth_norm'] * w_growth) + 
+        (city_stats['diversity_norm'] * w_diversity)
+    ) * 100
+
+    # --- 3. DYNAMIC LEADERBOARD ---
+    st.subheader("🏆 The 'Next Hub' Leaderboard")
+    top_10 = city_stats.sort_values('Final_Score', ascending=False).head(10)
+    
+    fig_lead = px.bar(top_10, x='Final_Score', y=top_10.index, orientation='h', 
+                      color='Final_Score', color_continuous_scale='Viridis',
+                      labels={'index': 'City', 'Final_Score': 'Opportunity Score'})
+    fig_lead.update_layout(yaxis={'categoryorder':'total ascending'}, height=400)
+    st.plotly_chart(fig_lead, use_container_width=True)
+
+    # --- 4. WHAT-IF SHOCK SIMULATOR ---
+    st.divider()
+    st.subheader("⚡ What-If Shock Simulator")
+    col_s1, col_s2 = st.columns([1, 2])
+    
+    with col_s1:
+        target_city = st.selectbox("Pick a City to Shock:", top_10.index)
+        shock_type = st.selectbox("Scenario:", [
+            "+20% Tech Growth", 
+            "Manufacturing Decline (-15%)", 
+            "Housing Spike (+10%)"
+        ])
+        
+        if st.button("Run Simulation"):
+            # Logic: Update the score for just that city and see rank change
+            base_score = city_stats.loc[target_city, 'Final_Score']
+            sim_score = base_score * 1.2 if "+" in shock_type else base_score * 0.85
+            
+            with col_s2:
+                st.write(f"### Result for {target_city}")
+                st.metric("Simulated Score", f"{sim_score:.1f}", delta=f"{sim_score - base_score:.1f}")
+                st.write(f"This shock would move {target_city} on the leaderboard relative to current weights.")
+
+    # --- 5. THE JUDGE BUTTON ---
+    st.divider()
+    if st.button("🎯 Generate Judge's Shortlist"):
+        st.subheader("Top 3 High-Conviction Cities")
+        final_3 = top_10.head(3)
+        cols = st.columns(3)
+        
+        for i, (city, row) in enumerate(final_3.iterrows()):
+            with cols[i]:
+                st.success(f"**{i+1}. {city}**")
+                st.write(f"**Score:** {row['Final_Score']:.1f}")
+                st.write(f"✅ **Why:** High {selected_ind if 'selected_ind' in locals() else 'Industrial'} momentum.")
+                st.write(f"⚠️ **Risk:** Historically high volatility.")
