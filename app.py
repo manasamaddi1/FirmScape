@@ -1,13 +1,4 @@
 import os
-# ─── REQUIRED PACKAGES ──────────────────────────────────────────────────────
-# If you see Pylance "cannot be resolved" warnings, your VS Code interpreter
-# is not pointing to the right environment. Fix:
-#   1. Open Terminal in VS Code
-#   2. Run: pip install streamlit pandas matplotlib seaborn numpy scipy plotly scikit-learn
-#   3. Press Cmd+Shift+P → "Python: Select Interpreter" → pick the one with these packages
-#   4. pip install xgboost  (optional — falls back to GradientBoosting if missing)
-# The app WILL run fine even with Pylance warnings — they are type-checker false alarms.
-# ────────────────────────────────────────────────────────────────────────────
 import streamlit as st              # type: ignore
 import pandas as pd                 # type: ignore
 import matplotlib.pyplot as plt     # type: ignore
@@ -18,6 +9,7 @@ from scipy import stats             # type: ignore
 import plotly.express as px         # type: ignore
 import plotly.graph_objects as go   # type: ignore
 from scipy.stats import pearsonr    # type: ignore
+import xgboost as xgb
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -27,40 +19,27 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 @st.cache_data
 def load_data():
     df = pd.read_csv("merged_companies_housing.csv")
-
-    # ── Robust year extraction: handle many date formats ──────────────────────
-    # Try standard datetime parse first
     year_series = pd.to_datetime(df['date'], errors='coerce').dt.year
-
-    # If that failed for most rows, try extracting 4-digit year from string
-    # e.g. "2015-Q2", "2015Q2", "2015", "01/2015", etc.
     if year_series.isna().mean() > 0.5:
         year_series = df['date'].astype(str).str.extract(r'(\b\d{4}\b)')[0].astype(float)
-
-    # If there's a separate 'year' column, use that instead
     if 'year' in df.columns and df['year'].notna().mean() > 0.5:
         year_series = pd.to_numeric(df['year'], errors='coerce')
-
-    df['year_int'] = year_series.astype('Int64')   # nullable int keeps NaT as NA
+    df['year_int'] = year_series.astype('Int64')
     df = df.dropna(subset=['year_int'])
     df['year_int'] = df['year_int'].astype(int)
-    # ──────────────────────────────────────────────────────────────────────────
-
     df['city_x'] = df['city_x'].fillna("Unknown").astype(str)
     df = df.dropna(subset=['pct_change'])
     return df
 
 @st.cache_data
 def load_integrated_data():
-    """Load the quarterly integrated dataset — tries several possible filenames."""
     possible_names = [
         "firmscape_integrated_cbsa_quarterly_cleaned.csv",
         "firmscape_integrated_cbsa.csv",
         "firmscape_integrated_cbsa_quarterly.csv",
         "firmscape_active_businesses.csv",
-        "firmscape_active_businesse.csv",  # truncated name visible in VS Code
+        "firmscape_active_businesse.csv",
     ]
-    # Also try any CSV in the folder that starts with "firmscape_integrated"
     import glob
     found = glob.glob("firmscape_integrated*.csv") + glob.glob("firmscape_active*.csv")
     all_names = possible_names + [f for f in found if f not in possible_names]
@@ -68,11 +47,10 @@ def load_integrated_data():
     for fname in all_names:
         try:
             df = pd.read_csv(fname)
-            # Detect city column
             for city_candidate in ['city_state', 'city', 'metro_name', 'cbsa_name']:
                 if city_candidate in df.columns:
                     df[city_candidate] = df[city_candidate].fillna("Unknown").astype(str)
-                    df['_city_col'] = city_candidate  # store which col to use
+                    df['_city_col'] = city_candidate
                     break
             df['year'] = pd.to_numeric(df.get('year', pd.Series(dtype=float)), errors='coerce')
             df['quarter'] = pd.to_numeric(df.get('quarter', pd.Series(dtype=float)), errors='coerce')
@@ -88,7 +66,7 @@ def load_integrated_data():
                         'firm_count_total']:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors='coerce')
-            return df, fname  # return df AND the filename that worked
+            return df, fname
         except FileNotFoundError:
             continue
     return None, None
@@ -102,16 +80,60 @@ except FileNotFoundError:
 integrated_df, integrated_fname = load_integrated_data()
 
 # ─────────────────────────────────────────────
-# CURATED CITIES (professor said 3-5 familiar cities)
+# COMPUTE TOP CITIES FROM INTEGRATED DATASET
 # ─────────────────────────────────────────────
-CURATED_CITIES = ["Detroit, MI", "Austin, TX", "San Jose, CA", "Seattle, WA", "Chicago, IL"]
+def get_top_cities(idf, n=100):
+    """Return top-n cities by data completeness from the integrated dataset."""
+    if idf is None:
+        return []
+    city_col_name = idf['_city_col'].iloc[0] if '_city_col' in idf.columns else 'city_state'
+    idf2 = idf.copy()
+    idf2['city_state'] = idf2[city_col_name].astype(str)
+    required_cols = ['fhfa_yoy', 'zillow_yoy', 'zillow_price_q', 'firms_founded_yoy']
+    available_cols = [c for c in required_cols if c in idf2.columns]
+    city_completeness = (
+        idf2.groupby('city_state')[available_cols]
+        .count()
+        .min(axis=1)
+        .sort_values(ascending=False)
+    )
+    return city_completeness[city_completeness > 0].head(n).index.tolist()
+
+TOP_100_CITIES = get_top_cities(integrated_df, 100)
+
+def resolve_city_from_keyword(keyword, city_list):
+    """Find best-matching city from list for a given keyword."""
+    return next((c for c in city_list if keyword.lower() in c.lower()), None)
+
+# ─────────────────────────────────────────────
+# CURATED CITIES — always exactly 5 valid cities
+# Prefers iconic case-study cities by keyword;
+# pads with top-data cities when keywords don’t match.
+# ─────────────────────────────────────────────
+CASE_STUDY_KEYWORDS = ["Detroit", "Austin", "Seattle", "Chicago", "Phoenix"]
+
+# Build keyword → resolved dataset city map
+KEYWORD_TO_CITY = {kw: resolve_city_from_keyword(kw, TOP_100_CITIES) for kw in CASE_STUDY_KEYWORDS}
+
+# Start with matched keywords (preserving order)
+CURATED_CITIES = [KEYWORD_TO_CITY[kw] for kw in CASE_STUDY_KEYWORDS if KEYWORD_TO_CITY[kw]]
+
+# Pad to exactly 5 with next best top-data cities not already included
+for city in TOP_100_CITIES:
+    if len(CURATED_CITIES) >= 5:
+        break
+    if city not in CURATED_CITIES:
+        CURATED_CITIES.append(city)
+
+# Ultimate fallback
+if not CURATED_CITIES:
+    CURATED_CITIES = TOP_100_CITIES[:5]
 
 # ─────────────────────────────────────────────
 # SIDEBAR
 # ─────────────────────────────────────────────
 st.sidebar.title("FirmScape Dashboard")
 
-# Stakeholder selector (professor's feedback: different audiences)
 st.sidebar.markdown("### 👤 Who Are You?")
 stakeholder = st.sidebar.radio(
     "Select your perspective:",
@@ -124,40 +146,97 @@ tab = st.sidebar.radio(
 )
 
 # ─────────────────────────────────────────────
-# SESSION STATE — for case study presets
+# CASE STUDY PRESETS — fully data-driven
+# Built from the actual top 5 cities with the
+# most complete data in the integrated dataset.
 # ─────────────────────────────────────────────
-CASE_STUDY_PRESETS = {
-    "Detroit Manufacturing": {
-        "city": "Detroit, MI",
-        "housing_metric": "fhfa_yoy (FHFA % change YoY)",
-        "story": "Detroit's manufacturing dominance peaked in the 1970s. As auto industry employment collapsed through the 80s–90s, housing prices followed — with a lag. Watch how firm founding rates dried up *before* the housing crash.",
-        "what_to_look_for": "A sharp decline in `firms_founded_yoy` in the early 1980s, followed by falling `fhfa_yoy` 2–4 years later.",
-        "emoji": "🏭",
-    },
-    "Bay Area Technology": {
-        "city": "San Jose, CA",
-        "housing_metric": "fhfa_yoy (FHFA % change YoY)",
-        "story": "Silicon Valley's tech boom drove some of the most extreme housing appreciation in U.S. history. Firm concentration (HHI) is high — a handful of industries dominate — yet housing prices kept climbing.",
-        "what_to_look_for": "High `top_industry_share_new` + rising `fhfa_yoy` in the 1990s dot-com era and again post-2012.",
-        "emoji": "💻",
-    },
-    "Austin Technology": {
-        "city": "Austin, TX",
-        "housing_metric": "fhfa_yoy (FHFA % change YoY)",
-        "story": "Austin transformed from a government/university city to a tech hub through the 2010s. Firm diversity grew, new companies flooded in, and housing prices exploded — especially post-2020.",
-        "what_to_look_for": "Rising `industry_count_new` and `firms_founded_yoy` from 2010 onward, with housing lagging by ~2 years.",
-        "emoji": "🤠",
-    },
-    "Seattle Tech": {
-        "city": "Seattle, WA",
-        "housing_metric": "fhfa_yoy (FHFA % change YoY)",
-        "story": "Amazon and Microsoft anchored Seattle's tech transformation. High industry concentration (few dominant firms) paired with explosive housing growth — a case study in how a single industry can reshape a city.",
-        "what_to_look_for": "High `hhi_new` (concentration) paired with rising housing prices — the opposite of the 'diversity = stability' hypothesis.",
-        "emoji": "☁️",
-    },
-}
+def build_case_study_presets(idf, curated_cities):
+    """
+    Generate case study presets for the top 5 curated cities,
+    using real stats from the dataset to write honest narratives.
+    """
+    if idf is None or not curated_cities:
+        return {}
 
-# Initialize session state for case study preset
+    city_col_name = idf['_city_col'].iloc[0] if '_city_col' in idf.columns else 'city_state'
+    idf2 = idf.copy()
+    idf2['city_state'] = idf2[city_col_name].astype(str)
+
+    EMOJIS = ["🏙️", "📈", "🏗️", "🌆", "🌇"]
+    presets = {}
+
+    for i, city in enumerate(curated_cities[:5]):
+        cd = idf2[idf2['city_state'] == city]
+
+        # — Housing stats —
+        hvals = cd['fhfa_yoy'].dropna() if 'fhfa_yoy' in cd.columns else pd.Series(dtype=float)
+        avg_hpi   = hvals.mean() * 100 if len(hvals) > 0 else None
+        vol_hpi   = hvals.std()  * 100 if len(hvals) > 0 else None
+        pct_pos   = (hvals > 0).mean() * 100 if len(hvals) > 0 else None
+        max_yr    = int(cd.loc[cd['fhfa_yoy'].idxmax(), 'year']) if (len(hvals) > 0 and 'year' in cd.columns) else None
+        min_yr    = int(cd.loc[cd['fhfa_yoy'].idxmin(), 'year']) if (len(hvals) > 0 and 'year' in cd.columns) else None
+
+        # — Firm stats —
+        fvals = cd['firms_founded_yoy'].dropna() if 'firms_founded_yoy' in cd.columns else pd.Series(dtype=float)
+        avg_firm  = fvals.mean() * 100 if len(fvals) > 0 else None
+
+        # — Diversity stats —
+        dvals = cd['industry_count_new'].dropna() if 'industry_count_new' in cd.columns else pd.Series(dtype=float)
+        avg_div   = int(dvals.mean()) if len(dvals) > 0 else None
+
+        # — Build narrative from real numbers —
+        short_name = city.split(",")[0].split("-")[0].strip()
+
+        if avg_hpi is not None and vol_hpi is not None:
+            if vol_hpi > 8:
+                volatility_label = "highly volatile"
+                vol_insight = f"with a std dev of {vol_hpi:.1f}% — one of the more turbulent markets in the dataset"
+            elif vol_hpi > 4:
+                volatility_label = "moderately volatile"
+                vol_insight = f"with a std dev of {vol_hpi:.1f}% — typical boom-bust sensitivity"
+            else:
+                volatility_label = "relatively stable"
+                vol_insight = f"with a std dev of {vol_hpi:.1f}% — more insulated from national shocks"
+
+            peak_note = f"Peak growth occurred around {max_yr}." if max_yr else ""
+            crash_note = f"The sharpest decline was around {min_yr}." if min_yr else ""
+
+            story = (
+                f"{short_name} averaged {avg_hpi:.1f}% annual home price growth and is {volatility_label} "
+                f"({vol_insight}). Prices rose in {pct_pos:.0f}% of all quarters. "
+                f"{peak_note} {crash_note}".strip()
+            )
+            if avg_firm is not None:
+                firm_dir = "above" if avg_firm > 0 else "below"
+                story += f" Firm founding averaged {abs(avg_firm):.1f}% per year — {firm_dir} the zero baseline."
+            if avg_div is not None:
+                story += f" The economy averaged {avg_div} distinct industries per quarter."
+
+            what_to_look_for = (
+                f"Watch the {('peaks around ' + str(max_yr)) if max_yr else 'highs'} "
+                f"and {('troughs around ' + str(min_yr)) if min_yr else 'lows'} in the housing line. "
+                f"Does firm growth lead or lag the housing moves?"
+            )
+        else:
+            story = f"Explore {short_name}'s housing and firm founding data across 50 years of quarterly records."
+            what_to_look_for = "Look for periods where firm growth accelerates before housing prices follow."
+
+        presets[f"{EMOJIS[i]} {short_name}"] = {
+            "city_keyword": short_name,
+            "city_full": city,          # exact dataset name — used for direct lookup
+            "housing_metric": "fhfa_yoy (FHFA % change YoY)",
+            "story": story,
+            "what_to_look_for": what_to_look_for,
+            "emoji": EMOJIS[i],
+        }
+
+    return presets
+
+CASE_STUDY_PRESETS = build_case_study_presets(integrated_df, CURATED_CITIES)
+
+# ─────────────────────────────────────────────
+# SESSION STATE
+# ─────────────────────────────────────────────
 if 'case_study_preset' not in st.session_state:
     st.session_state['case_study_preset'] = None
 if 'preset_city' not in st.session_state:
@@ -169,13 +248,10 @@ if 'preset_housing_metric' not in st.session_state:
 # HOME TAB
 # ─────────────────────────────────────────────
 if tab == "🏠 Home":
-
-    # ── WHO IT'S FOR + WHAT VALUE IT BRINGS ──────────────────────────────────
     st.title("FirmScape")
     st.markdown("##### *Industry shifts move housing prices. We built the tool to see it coming.*")
     st.divider()
 
-    # Customer + Value statement — the professor's ask
     c_left, c_right = st.columns([2, 1])
     with c_left:
         st.markdown("""
@@ -200,7 +276,6 @@ if tab == "🏠 Home":
 
     st.divider()
 
-    # ── HONEST MODEL FRAMING ──────────────────────────────────────────────────
     with st.expander("⚠️ What this model does — and doesn't — claim"):
         st.markdown("""
         Housing prices are driven by **many factors** (interest rates, zoning, supply, demographics).  
@@ -214,51 +289,43 @@ if tab == "🏠 Home":
 
     st.divider()
 
-    # ── CASE STUDY EXPLORER — the interactive piece ───────────────────────────
     st.subheader("🗺️ Explore a Famous Case Study")
     st.markdown("Pick a city whose story you know — then follow the data to see if the numbers match the narrative.")
 
-    cs_cols = st.columns(4)
     cs_names = list(CASE_STUDY_PRESETS.keys())
-
-    # Card buttons for each case study
-    selected_cs = st.selectbox(
-        "Pick a famous case study:",
-        cs_names,
-        index=0,
-        key="home_case_study"
-    )
-
+    selected_cs = st.selectbox("Pick a famous case study:", cs_names, index=0, key="home_case_study")
     preset = CASE_STUDY_PRESETS[selected_cs]
 
-    # Show the case study card
+    # city_full is the exact dataset city name — always valid since presets are data-driven
+    city_full = preset.get('city_full', CURATED_CITIES[0])
+
     st.markdown(f"""
     <div style="background: #1a1f2e; border-left: 4px solid #4f8ef7; border-radius: 8px; padding: 20px; margin: 12px 0;">
         <h3 style="margin:0; color:white;">{preset['emoji']} {selected_cs}</h3>
-        <p style="color: #aab4c8; margin: 10px 0 6px 0;">{preset['story']}</p>
+        <p style="color: #aab4c8; margin: 10px 0 4px 0; font-size:0.85em;">📍 Dataset city: <strong style="color:#4f8ef7">{city_full}</strong></p>
+        <p style="color: #aab4c8; margin: 6px 0 6px 0;">{preset['story']}</p>
         <p style="color: #f7a44f; font-size: 0.88em; margin:0;">
             📌 <strong>What to look for:</strong> {preset['what_to_look_for']}
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-    # The "Go" button stores the preset in session state
     if st.button(f"🚀 Load {selected_cs} preset → jump to Evidence tab", type="primary"):
         st.session_state['case_study_preset'] = selected_cs
-        st.session_state['preset_city'] = preset['city']
+        st.session_state['preset_city'] = city_full   # exact dataset name, guaranteed valid
         st.session_state['preset_housing_metric'] = preset['housing_metric']
         st.success(
             f"✅ Preset loaded! Navigate to **🔎 Evidence** in the sidebar — "
-            f"it's now pre-set to **{preset['city']}** with **{preset['housing_metric']}**."
+            f"it's now pre-set to **{city_full}** with **{preset['housing_metric']}**."
         )
 
     if st.session_state.get('case_study_preset'):
         active = st.session_state['case_study_preset']
-        st.info(f"📍 Active preset: **{active}** → {CASE_STUDY_PRESETS[active]['city']}. Go to **🔎 Evidence** to explore.")
+        active_city = st.session_state.get('preset_city', CURATED_CITIES[0])
+        st.info(f"📍 Active preset: **{active}** → {active_city}. Go to **🔎 Evidence** to explore.")
 
     st.divider()
 
-    # ── HOW TO USE ────────────────────────────────────────────────────────────
     st.subheader("How to use FirmScape")
     hw1, hw2, hw3, hw4 = st.columns(4)
     with hw1:
@@ -320,36 +387,50 @@ if tab == "🧩 Build the Dataset":
 if tab == "📊 EDA Explorer":
     st.title("📊 EDA Explorer: What Are We Measuring?")
     st.markdown(
-        "Each variable we use tells a piece of the story. Pick one below to learn "
-        "**what it measures**, **where it comes from**, and **how it relates to housing prices** — "
-        "explained simply, shown with real data."
+        "Select a variable below to see its definition, chart, and key stats. "
+        "Expand the details sections for deeper context."
     )
 
-    # ── Variable selector ─────────────────────────────────────────────────────
-    selected_var = st.selectbox("🔍 Select a variable to explore:", [
-        "🏠 Housing Price Change (FHFA YoY %) — our TARGET",
-        "🏗️ Firm Founding Rate (YoY %) — how fast companies are being born",
-        "🏭 Industry Concentration (HHI) — how dominated a city is by one industry",
-        "🌐 Industry Diversity — how many different industries exist in a city",
-        "📊 Top Industry Share — how much the #1 industry controls",
-    ], key="eda_var")
+    sel_col1, sel_col2 = st.columns(2)
+    with sel_col1:
+        selected_var = st.selectbox("🔍 Select a variable:", [
+            "🎯 Target: Housing Price Change",
+            "📡 Signal 1: Firm Founding Rate",
+            "📡 Signal 2: Industry Concentration (HHI)",
+            "📡 Signal 3: Industry Diversity",
+            "📡 Signal 4: Top Industry Share",
+        ], key="eda_var")
 
-    st.divider()
-
-    # ── Use integrated dataset if available, else fallback ────────────────────
     use_idf = integrated_df is not None
     if use_idf:
         idf_eda = integrated_df.copy()
         city_col_eda = idf_eda['_city_col'].iloc[0] if '_city_col' in idf_eda.columns else 'city_state'
         idf_eda['city_state'] = idf_eda[city_col_eda].astype(str)
-        all_eda_cities = sorted(idf_eda['city_state'].unique())
-        PREFERRED_EDA = ["Austin, TX", "Detroit, MI", "San Jose, CA", "Seattle, WA", "Chicago, IL"]
-        eda_cities = [c for c in PREFERRED_EDA if c in all_eda_cities] or all_eda_cities[:5]
+        # Use top cities from dataset — prefer curated 5, pad with more top cities
+        eda_cities = [c for c in CURATED_CITIES if c in TOP_100_CITIES] or TOP_100_CITIES[:5]
     else:
         idf_eda = None
         eda_cities = CURATED_CITIES
 
-    # ── Helper: dark styled matplotlib fig ───────────────────────────────────
+    with sel_col2:
+        if "Target" in selected_var or "Signal 1" in selected_var:
+            eda_city_pick = st.selectbox("Pick a city:", eda_cities, key="eda_city_global")
+            eda_compare_cities = None
+        elif "Signal 2" in selected_var:
+            eda_compare_cities = st.multiselect("Compare cities:", eda_cities, default=eda_cities[:3], key="eda_hhi_cities")
+            eda_city_pick = None
+        elif "Signal 3" in selected_var:
+            eda_compare_cities = st.multiselect("Compare cities:", eda_cities, default=eda_cities[:3], key="eda_div_cities")
+            eda_city_pick = None
+        elif "Signal 4" in selected_var:
+            eda_compare_cities = st.multiselect("Compare cities:", eda_cities, default=eda_cities[:3], key="eda_top_cities")
+            eda_city_pick = None
+        else:
+            eda_city_pick = None
+            eda_compare_cities = None
+
+    st.divider()
+
     def dark_fig(w=10, h=4):
         fig, ax = plt.subplots(figsize=(w, h))
         fig.patch.set_facecolor("#0e1117")
@@ -358,348 +439,367 @@ if tab == "📊 EDA Explorer":
         ax.spines[:].set_color("#333")
         return fig, ax
 
-    # ═══════════════════════════════════════════════════════════════════════════
-    if "Housing Price Change" in selected_var:
-    # ═══════════════════════════════════════════════════════════════════════════
-        left, right = st.columns([1, 2])
-        with left:
-            st.markdown("#### 🏠 Housing Price Change (FHFA YoY %)")
-            st.markdown("**In plain English:** Every year, we measure how much the average home price in a city went up or down compared to the year before. If it was +5%, homes got 5% more expensive.")
-            st.markdown("**Where it comes from:** The Federal Housing Finance Agency (FHFA) — the official U.S. government source for home price data.")
-            st.markdown("**Why it matters:** This is what we're trying to predict. Everything else in FirmScape is asking: *does this variable help explain why some cities' housing prices rose faster than others?*")
-            st.caption("⚠️ This measures price *change*, not price *level*. A city with expensive homes and 0% growth looks the same as a cheap city with 0% growth.")
+    def chart_note(text):
+        st.markdown(
+            f'<p style="color:#888; font-size:0.8em; margin-top:4px;">ℹ️ {text}</p>',
+            unsafe_allow_html=True
+        )
 
-        with right:
-            if use_idf:
-                city_pick = st.selectbox("Pick a city to see its history:", eda_cities, key="eda_hpi_city")
-                city_data = idf_eda[idf_eda['city_state'] == city_pick].dropna(subset=['fhfa_yoy']).sort_values(['year', 'quarter'])
-                if not city_data.empty:
-                    fig, ax = dark_fig()
-                    ax.plot(range(len(city_data)), city_data['fhfa_yoy'].values, color='#4f8ef7', linewidth=2)
-                    ax.axhline(0, color='#666', linewidth=0.8, linestyle='--')
-                    ax.fill_between(range(len(city_data)), city_data['fhfa_yoy'].values, 0,
-                                    where=city_data['fhfa_yoy'].values > 0, alpha=0.2, color='#4f8ef7')
-                    ax.fill_between(range(len(city_data)), city_data['fhfa_yoy'].values, 0,
-                                    where=city_data['fhfa_yoy'].values < 0, alpha=0.2, color='#f74f4f')
-                    # X ticks at year boundaries
-                    yr_rows = city_data.reset_index(drop=True)
-                    ticks = yr_rows[yr_rows['quarter'] == 1].index[::4].tolist()
-                    labels = yr_rows.loc[ticks, 'year'].astype(str).tolist()
-                    ax.set_xticks(ticks); ax.set_xticklabels(labels, rotation=45, color='white', fontsize=8)
-                    ax.set_ylabel("% change vs year before", color='white')
-                    ax.set_title(f"{city_pick} — Home Price Change Per Year (FHFA)", color='white')
-                    st.pyplot(fig); plt.close(fig)
-                    st.caption("🔵 Blue = prices rising. 🔴 Red = prices falling. The 2008 crash is visible in most cities.")
+    if "Target" in selected_var:
+        st.markdown("#### 🎯 Housing Price Change (FHFA YoY %)")
+        st.info("**What it is:** Year-over-year % change in average home prices — the variable we're trying to predict.")
 
-                    # ── Auto insight ──────────────────────────────────────────
-                    st.markdown("#### 🧠 What does this tell us?")
-                    hpi_vals = city_data['fhfa_yoy'].dropna()
-                    avg = hpi_vals.mean()
-                    volatility = hpi_vals.std()
-                    max_yr = city_data.loc[city_data['fhfa_yoy'].idxmax(), 'year'] if not city_data.empty else "—"
-                    min_yr = city_data.loc[city_data['fhfa_yoy'].idxmin(), 'year'] if not city_data.empty else "—"
-                    pct_positive = (hpi_vals > 0).mean() * 100
+        if use_idf:
+            city_pick = eda_city_pick
+            city_data = idf_eda[idf_eda['city_state'] == city_pick].dropna(subset=['fhfa_yoy']).sort_values(['year', 'quarter'])
 
-                    col_h1, col_h2, col_h3 = st.columns(3)
-                    col_h1.metric("Avg annual price change", f"{avg:.1f}%")
-                    col_h2.metric("Volatility (std dev)", f"{volatility:.1f}%")
-                    col_h3.metric("Years with rising prices", f"{pct_positive:.0f}%")
-                    st.markdown(f"""
-                    **For {city_pick}:** Home prices rose in **{pct_positive:.0f}% of quarters** on record, with an average change of **{avg:.1f}% per year**.
-                    The biggest surge was around **{max_yr}** and the steepest drop around **{min_yr}**.
-                    {'High volatility suggests this city is sensitive to economic shocks.' if volatility > 5 else 'Relatively stable price changes suggest a steadier local economy.'}
-                    This is what the rest of FirmScape tries to explain — what drives those rises and falls?
+            if not city_data.empty:
+                fig, ax = dark_fig()
+                ax.plot(range(len(city_data)), city_data['fhfa_yoy'].values, color='#4f8ef7', linewidth=2)
+                ax.axhline(0, color='#666', linewidth=0.8, linestyle='--')
+                ax.fill_between(range(len(city_data)), city_data['fhfa_yoy'].values, 0,
+                                where=city_data['fhfa_yoy'].values > 0, alpha=0.2, color='#4f8ef7')
+                ax.fill_between(range(len(city_data)), city_data['fhfa_yoy'].values, 0,
+                                where=city_data['fhfa_yoy'].values < 0, alpha=0.2, color='#f74f4f')
+                yr_rows = city_data.reset_index(drop=True)
+                ticks = yr_rows[yr_rows['quarter'] == 1].index[::4].tolist()
+                labels = yr_rows.loc[ticks, 'year'].astype(str).tolist()
+                ax.set_xticks(ticks); ax.set_xticklabels(labels, rotation=45, color='white', fontsize=8)
+                ax.set_ylabel("% change vs year before", color='white')
+                ax.set_title(f"{city_pick} — Home Price Change Per Year (FHFA)", color='white')
+                st.pyplot(fig); plt.close(fig)
+                chart_note("Blue = prices rising · Red = prices falling · 2008 crash visible in most cities")
+
+                hpi_vals = city_data['fhfa_yoy'].dropna()
+                avg = hpi_vals.mean()
+                volatility = hpi_vals.std()
+                pct_positive = (hpi_vals > 0).mean() * 100
+                col_h1, col_h2, col_h3 = st.columns(3)
+                col_h1.metric("Avg annual price change", f"{avg*100:.1f}%")
+                col_h2.metric("Volatility (std dev)", f"{volatility*100:.1f}%")
+                col_h3.metric("Years with rising prices", f"{pct_positive:.0f}%")
+
+                takeaway_text = (
+                    f"Prices rose <b>{pct_positive:.0f}%</b> of the time, avg <b>{avg*100:.1f}%/yr</b>. "
+                    f"{'High volatility — sensitive to shocks.' if volatility > 5 else 'Relatively stable growth pattern.'}"
+                )
+                st.markdown(
+                    f'<div style="background:#1a2a1a; border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:8px 0;">'
+                    f'💡 <strong>Takeaway:</strong> {takeaway_text}</div>',
+                    unsafe_allow_html=True
+                )
+
+                with st.expander("📚 Where it comes from & why it matters"):
+                    st.markdown("""
+                    **Source:** Federal Housing Finance Agency (FHFA) — the official U.S. government home price index.
+
+                    **Why it matters:** This is our prediction target. Every other variable in FirmScape is evaluated on how well it explains *why this number goes up or down* in a given city.
+
+                    **⚠️ Note:** This measures price *change*, not price *level*.
                     """)
+            else:
+                st.info("No FHFA data for this city.")
+
+    elif "Signal 1" in selected_var:
+        st.markdown("#### 📡 Firm Founding Rate (YoY %)")
+        st.info("**What it is:** How much faster or slower new businesses are being founded compared to last year.")
+
+        if use_idf:
+            city_pick2 = eda_city_pick
+            city_data2 = idf_eda[idf_eda['city_state'] == city_pick2].dropna(subset=['firms_founded_yoy', 'fhfa_yoy']).sort_values(['year', 'quarter'])
+
+            if not city_data2.empty:
+                fig, ax = dark_fig()
+                ax2 = ax.twinx()
+                ax.plot(range(len(city_data2)), city_data2['firms_founded_yoy'].values,
+                        color='#f7a44f', linewidth=2, label='Firm Growth %')
+                ax2.plot(range(len(city_data2)), city_data2['fhfa_yoy'].values,
+                         color='#4f8ef7', linewidth=1.5, linestyle='--', alpha=0.7, label='Housing Price %')
+                ax.axhline(0, color='#555', linewidth=0.7)
+                yr_rows2 = city_data2.reset_index(drop=True)
+                ticks2 = yr_rows2[yr_rows2['quarter'] == 1].index[::4].tolist()
+                labels2 = yr_rows2.loc[ticks2, 'year'].astype(str).tolist()
+                ax.set_xticks(ticks2); ax.set_xticklabels(labels2, rotation=45, color='white', fontsize=8)
+                ax.set_ylabel("Firm Founding Growth %", color='#f7a44f')
+                ax2.set_ylabel("Housing Price Change %", color='#4f8ef7')
+                ax2.tick_params(colors='white')
+                ax2.spines[:].set_color("#333")
+                ax2.set_facecolor("#0e1117")
+                ax.set_title(f"{city_pick2} — Firm Growth vs Housing Prices", color='white')
+                lines1, labels_l1 = ax.get_legend_handles_labels()
+                lines2, labels_l2 = ax2.get_legend_handles_labels()
+                ax.legend(lines1 + lines2, labels_l1 + labels_l2,
+                          facecolor='#1e1e2e', labelcolor='white', fontsize=8)
+                fig.tight_layout()
+                st.pyplot(fig); plt.close(fig)
+                chart_note("Orange (left axis) = firm founding rate · Blue dashed (right axis) = housing price change")
+
+                insight_df = city_data2[['firms_founded_yoy', 'fhfa_yoy']].dropna()
+                if len(insight_df) >= 8:
+                    r_now, p_now = pearsonr(insight_df['firms_founded_yoy'], insight_df['fhfa_yoy'])
+                    lag_results = {}
+                    for lag in [1, 2, 4, 8]:
+                        lagged = insight_df['firms_founded_yoy'].shift(lag)
+                        combined = pd.DataFrame({'x': lagged, 'y': insight_df['fhfa_yoy']}).dropna()
+                        if len(combined) >= 6 and combined['x'].std() > 0 and combined['y'].std() > 0:
+                            r_lag, p_lag = pearsonr(combined['x'], combined['y'])
+                            lag_results[lag] = (r_lag, p_lag)
+
+                    best_lag = max(lag_results, key=lambda k: abs(lag_results[k][0])) if lag_results else None
+                    best_r, best_p = lag_results[best_lag] if best_lag else (r_now, p_now)
+                    lag_years = f"{best_lag // 4}yr" if best_lag and best_lag >= 4 else (f"{best_lag}Q" if best_lag else "—")
+
+                    col_i1, col_i2, col_i3 = st.columns(3)
+                    col_i1.metric("Same-time correlation (R)", f"{r_now:.2f}")
+                    col_i2.metric("Best predictive lag", lag_years)
+                    col_i3.metric("Best lag R", f"{best_r:.2f}" if best_lag else "—")
+
+                    sig_label = "significant" if p_now < 0.05 else "not significant"
+                    direction = "move together" if r_now > 0.1 else ("move oppositely" if r_now < -0.1 else "weakly correlated")
+                    takeaway_firm = (
+                        f"Firm growth and housing {direction} (R={r_now:.2f}, {sig_label}). "
+                        f"{'📈 Strongest signal at a lag — firm growth leads housing here.' if best_lag and abs(best_r) > abs(r_now) else '⚠️ Weak lead signal for this city.'}"
+                    )
+                    st.markdown(
+                        f'<div style="background:#1a2a1a; border-left:4px solid #f7a44f; border-radius:6px; padding:10px 14px; margin:8px 0;">'
+                        f'💡 <strong>Takeaway:</strong> {takeaway_firm}</div>',
+                        unsafe_allow_html=True
+                    )
                 else:
-                    st.info("No FHFA data for this city.")
+                    st.info("Not enough data to run lag analysis for this city.")
 
-    # ═══════════════════════════════════════════════════════════════════════════
-    elif "Firm Founding Rate" in selected_var:
-    # ═══════════════════════════════════════════════════════════════════════════
-        left, right = st.columns([1, 2])
-        with left:
-            st.markdown("#### 🏗️ Firm Founding Rate (YoY %)")
-            st.markdown("**In plain English:** How much did the number of new businesses in a city grow compared to last year? If a city had 100 new companies last year and 110 this year, that's +10%.")
-            st.markdown("**Where it comes from:** Business registration records, aggregated by city and year.")
-            st.markdown("**Why it matters:** New businesses mean new jobs, new workers moving in, more demand for housing. We expect this to *lead* housing prices — when firms boom, housing follows a year or two later.")
-            st.caption("⚠️ A single year spike could be noise. Look for sustained growth over 3+ years for a real signal.")
+                with st.expander("📚 Where it comes from & why it matters"):
+                    st.markdown("""
+                    **Source:** Business registration records, aggregated by city and year.
 
-        with right:
-            if use_idf:
-                city_pick2 = st.selectbox("Pick a city:", eda_cities, key="eda_firm_city")
-                city_data2 = idf_eda[idf_eda['city_state'] == city_pick2].dropna(subset=['firms_founded_yoy', 'fhfa_yoy']).sort_values(['year', 'quarter'])
-                if not city_data2.empty:
-                    fig, ax = dark_fig()
-                    ax2 = ax.twinx()
-                    ax.plot(range(len(city_data2)), city_data2['firms_founded_yoy'].values,
-                            color='#f7a44f', linewidth=2, label='Firm Growth %')
-                    ax2.plot(range(len(city_data2)), city_data2['fhfa_yoy'].values,
-                             color='#4f8ef7', linewidth=1.5, linestyle='--', alpha=0.7, label='Housing Price Change %')
-                    ax.axhline(0, color='#555', linewidth=0.7)
-                    yr_rows2 = city_data2.reset_index(drop=True)
-                    ticks2 = yr_rows2[yr_rows2['quarter'] == 1].index[::4].tolist()
-                    labels2 = yr_rows2.loc[ticks2, 'year'].astype(str).tolist()
-                    ax.set_xticks(ticks2); ax.set_xticklabels(labels2, rotation=45, color='white', fontsize=8)
-                    ax.set_ylabel("Firm Founding Growth %", color='#f7a44f')
-                    ax2.set_ylabel("Housing Price Change %", color='#4f8ef7')
-                    ax2.tick_params(colors='white')
-                    ax2.spines[:].set_color("#333")
-                    ax2.set_facecolor("#0e1117")
-                    ax.set_title(f"{city_pick2} — Firm Growth 🟠 vs Housing Prices 🔵", color='white')
-                    lines1, labels_l1 = ax.get_legend_handles_labels()
-                    lines2, labels_l2 = ax2.get_legend_handles_labels()
-                    ax.legend(lines1 + lines2, labels_l1 + labels_l2,
-                              facecolor='#1e1e2e', labelcolor='white', fontsize=8)
-                    fig.tight_layout()
-                    st.pyplot(fig); plt.close(fig)
-                    st.caption("🟠 Orange = firm founding rate. 🔵 Blue dashed = housing price change. Does orange move before blue?")
+                    **Why it matters:** New firms = new jobs = new workers moving in = more housing demand. This variable is expected to *lead* housing prices by 1–2 years.
+                    """)
 
-                    # ── Auto-generated insight ────────────────────────────────
-                    st.markdown("#### 🧠 What does this tell us?")
-                    insight_df = city_data2[['firms_founded_yoy', 'fhfa_yoy']].dropna()
+    elif "Signal 2" in selected_var:
+        st.markdown("#### 📡 Industry Concentration (HHI)")
+        st.info("**What it is:** How dominated a city's economy is by a single industry — higher HHI means more economic fragility.")
 
-                    if len(insight_df) >= 8:
-                        # Contemporaneous correlation
-                        r_now, p_now = pearsonr(insight_df['firms_founded_yoy'], insight_df['fhfa_yoy'])
+        if use_idf:
+            comp_cities = eda_compare_cities or []
+            if comp_cities:
+                fig, ax = dark_fig()
+                colors_hhi = ['#4f8ef7', '#f7a44f', '#4ff7a4', '#f74f4f']
+                for i, city in enumerate(comp_cities[:4]):
+                    cd = idf_eda[idf_eda['city_state'] == city].dropna(subset=['hhi_new']).sort_values(['year', 'quarter'])
+                    if not cd.empty:
+                        ax.plot(range(len(cd)), cd['hhi_new'].values, color=colors_hhi[i], linewidth=2, label=city)
+                cd_ref = idf_eda[idf_eda['city_state'] == comp_cities[0]].dropna(subset=['hhi_new']).sort_values(['year', 'quarter'])
+                yr_rows3 = cd_ref.reset_index(drop=True)
+                ticks3 = yr_rows3[yr_rows3['quarter'] == 1].index[::4].tolist() if 'quarter' in yr_rows3.columns else []
+                labels3 = yr_rows3.loc[ticks3, 'year'].astype(str).tolist() if ticks3 else []
+                if ticks3:
+                    ax.set_xticks(ticks3); ax.set_xticklabels(labels3, rotation=45, color='white', fontsize=8)
+                ax.set_ylabel("HHI Score", color='white')
+                ax.set_title("Industry Concentration Over Time — by City", color='white')
+                ax.legend(facecolor='#1e1e2e', labelcolor='white', fontsize=8)
+                fig.tight_layout()
+                st.pyplot(fig); plt.close(fig)
+                chart_note("Higher = fewer industries dominate · Lower = more evenly spread economy")
 
-                        # Lag correlations: does firm growth LEAD housing by 1–4 quarters?
-                        lag_results = {}
-                        for lag in [1, 2, 4, 8]:
-                            lagged = insight_df['firms_founded_yoy'].shift(lag)
-                            combined = pd.DataFrame({'x': lagged, 'y': insight_df['fhfa_yoy']}).dropna()
-                            if len(combined) >= 6 and combined['x'].std() > 0 and combined['y'].std() > 0:
-                                r_lag, p_lag = pearsonr(combined['x'], combined['y'])
-                                lag_results[lag] = (r_lag, p_lag)
+                stat_rows = []
+                for city in comp_cities[:4]:
+                    cd = idf_eda[idf_eda['city_state'] == city].dropna(subset=['hhi_new'])
+                    if not cd.empty:
+                        stat_rows.append({
+                            "City": city,
+                            "Avg HHI": f"{cd['hhi_new'].mean():.3f}",
+                            "Latest HHI": f"{cd.sort_values('year').iloc[-1]['hhi_new']:.3f}",
+                            "Trend": "↑ Rising" if cd.sort_values('year').iloc[-1]['hhi_new'] > cd['hhi_new'].mean() else "↓ Falling"
+                        })
+                if stat_rows:
+                    st.dataframe(pd.DataFrame(stat_rows), use_container_width=True, hide_index=True)
+                    most_conc = max(stat_rows, key=lambda x: float(x["Avg HHI"]))
+                    st.markdown(
+                        f'<div style="background:#1a2a1a; border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:8px 0;">'
+                        f'💡 <strong>Takeaway:</strong> <b>{most_conc["City"]}</b> has the highest average concentration.</div>',
+                        unsafe_allow_html=True
+                    )
+                    with st.expander("📚 Where it comes from & why it matters"):
+                        st.markdown("""
+                        **Source:** Calculated from business registration data using the Herfindahl-Hirschman Index (HHI) formula.
 
-                        best_lag = max(lag_results, key=lambda k: abs(lag_results[k][0])) if lag_results else None
-                        best_r, best_p = lag_results[best_lag] if best_lag else (r_now, p_now)
-
-                        # Plain-English summary
-                        direction = "rise together" if r_now > 0.1 else ("move oppositely" if r_now < -0.1 else "don't move together much")
-                        strength = "strongly" if abs(r_now) > 0.4 else ("moderately" if abs(r_now) > 0.2 else "weakly")
-                        lag_quarters = best_lag or 0
-                        lag_years = f"{lag_quarters // 4} year{'s' if lag_quarters > 4 else ''}" if lag_quarters >= 4 else f"{lag_quarters} quarter{'s' if lag_quarters > 1 else ''}"
-                        lead_conclusion = (
-                            f"The strongest signal comes when firm growth **leads housing by {lag_years}** "
-                            f"(R = {best_r:.2f}). This {'supports' if abs(best_r) > abs(r_now) else 'does not clearly support'} "
-                            f"the idea that firm growth is an early warning signal for housing prices in this city."
-                        ) if best_lag else ""
-
-                        sig_label = "statistically significant" if p_now < 0.05 else "not statistically significant"
-
-                        col_i1, col_i2, col_i3 = st.columns(3)
-                        col_i1.metric("Same-time correlation (R)", f"{r_now:.2f}")
-                        col_i2.metric("Best lag", f"{lag_years}" if best_lag else "—")
-                        col_i3.metric("Best lag R", f"{best_r:.2f}" if best_lag else "—")
-
-                        st.markdown(f"""
-                        **For {city_pick2}:** Firm founding growth and housing price changes {strength} {direction} at the same time (R = {r_now:.2f}, {sig_label}).
-
-                        {lead_conclusion}
-
-                        **Bottom line:** {'📈 Firm growth appears to be a useful leading indicator here — watch for sustained firm growth as an early signal of rising housing prices.' if abs(best_r) > 0.3 and best_lag else '⚠️ The relationship is weak for this city — other factors likely dominate housing prices here.'}
+                        **Why it matters:** Concentrated cities are fragile — when Detroit's auto industry collapsed, the whole city did too.
                         """)
-                    else:
-                        st.info("Not enough data points to run lag analysis for this city.")
 
-    # ═══════════════════════════════════════════════════════════════════════════
-    elif "Industry Concentration (HHI)" in selected_var:
-    # ═══════════════════════════════════════════════════════════════════════════
-        left, right = st.columns([1, 2])
-        with left:
-            st.markdown("#### 🏭 Industry Concentration (HHI)")
-            st.markdown("**In plain English:** Imagine a city where 90% of all jobs are at car factories. That city is *highly concentrated* — it's betting everything on one industry. The HHI score measures this. **High HHI = one industry dominates. Low HHI = many industries share the load.**")
-            st.markdown("**Where it comes from:** Calculated from business registration data using the Herfindahl-Hirschman Index formula.")
-            st.markdown("**Why it matters:** Highly concentrated cities are fragile — when Detroit's auto industry collapsed, the whole city collapsed. Diverse cities weather downturns better.")
-            st.caption("⚠️ High concentration isn't always bad — Silicon Valley is concentrated in tech, and housing prices boomed. The *type* of industry matters as much as concentration.")
+    elif "Signal 3" in selected_var:
+        st.markdown("#### 📡 Industry Diversity (# of Industries)")
+        st.info("**What it is:** Count of distinct industry types in a city — more industries means a more resilient local economy.")
 
-        with right:
-            if use_idf:
-                # Compare HHI over time for multiple cities
-                comp_cities = st.multiselect("Compare cities (pick 2–4):", eda_cities, default=eda_cities[:3], key="eda_hhi_cities")
-                if comp_cities:
-                    fig, ax = dark_fig()
-                    colors_hhi = ['#4f8ef7', '#f7a44f', '#4ff7a4', '#f74f4f']
-                    for i, city in enumerate(comp_cities[:4]):
-                        cd = idf_eda[idf_eda['city_state'] == city].dropna(subset=['hhi_new']).sort_values(['year', 'quarter'])
-                        if not cd.empty:
-                            ax.plot(range(len(cd)), cd['hhi_new'].values,
-                                    color=colors_hhi[i], linewidth=2, label=city)
-                    if comp_cities:
-                        cd_ref = idf_eda[idf_eda['city_state'] == comp_cities[0]].dropna(subset=['hhi_new']).sort_values(['year', 'quarter'])
-                        yr_rows3 = cd_ref.reset_index(drop=True)
-                        ticks3 = yr_rows3[yr_rows3['quarter'] == 1].index[::4].tolist() if 'quarter' in yr_rows3.columns else []
-                        labels3 = yr_rows3.loc[ticks3, 'year'].astype(str).tolist() if ticks3 else []
-                        if ticks3: ax.set_xticks(ticks3); ax.set_xticklabels(labels3, rotation=45, color='white', fontsize=8)
-                    ax.set_ylabel("HHI Score (higher = more concentrated)", color='white')
-                    ax.set_title("Industry Concentration Over Time — by City", color='white')
-                    ax.legend(facecolor='#1e1e2e', labelcolor='white', fontsize=8)
-                    fig.tight_layout()
-                    st.pyplot(fig); plt.close(fig)
-                    st.caption("Higher line = fewer industries dominate the city's economy. Lower line = more spread out.")
+        if use_idf and 'industry_count_new' in idf_eda.columns:
+            comp_cities2 = eda_compare_cities or []
+            if comp_cities2:
+                fig, ax = dark_fig()
+                colors_div = ['#4f8ef7', '#f7a44f', '#4ff7a4', '#f74f4f']
+                for i, city in enumerate(comp_cities2[:4]):
+                    cd = idf_eda[idf_eda['city_state'] == city].dropna(subset=['industry_count_new']).sort_values(['year', 'quarter'])
+                    if not cd.empty:
+                        cd_annual = cd.groupby('year')['industry_count_new'].mean().reset_index()
+                        ax.plot(cd_annual['year'], cd_annual['industry_count_new'],
+                                color=colors_div[i], linewidth=2, marker='o', markersize=3, label=city)
+                ax.set_xlabel("Year", color='white')
+                ax.set_ylabel("# of distinct industries", color='white')
+                ax.set_title("Industry Diversity Over Time — by City", color='white')
+                ax.legend(facecolor='#1e1e2e', labelcolor='white', fontsize=8)
+                fig.tight_layout()
+                st.pyplot(fig); plt.close(fig)
+                chart_note("Each point = avg # of distinct industries that year · Rising = economy becoming more diverse")
 
-    # ═══════════════════════════════════════════════════════════════════════════
-    elif "Industry Diversity" in selected_var:
-    # ═══════════════════════════════════════════════════════════════════════════
-        left, right = st.columns([1, 2])
-        with left:
-            st.markdown("#### 🌐 Industry Diversity")
-            st.markdown("**In plain English:** How many *different types* of businesses exist in a city? A city with restaurants, hospitals, law firms, tech companies, and factories is *diverse*. A city with only steel mills is *not*.")
-            st.markdown("**Where it comes from:** Count of distinct industry categories per city, per year.")
-            st.markdown("**Why it matters:** More diverse = more stable. If one industry tanks, others can absorb the shock. We expect more diverse cities to have steadier (if not explosive) housing growth.")
-            st.caption("⚠️ Diversity doesn't guarantee high prices — a city with lots of low-wage industries might be diverse but still see slow housing growth.")
+                stat_rows2 = []
+                for city in comp_cities2[:4]:
+                    cd = idf_eda[idf_eda['city_state'] == city].dropna(subset=['industry_count_new'])
+                    if not cd.empty:
+                        cd_annual = cd.groupby('year')['industry_count_new'].mean()
+                        stat_rows2.append({
+                            "City": city,
+                            "Avg # Industries": f"{cd_annual.mean():.0f}",
+                            "Recent # Industries": f"{cd_annual.iloc[-1]:.0f}",
+                            "Trend": "↑ Growing" if cd_annual.iloc[-1] > cd_annual.mean() else "↓ Shrinking"
+                        })
+                if stat_rows2:
+                    st.dataframe(pd.DataFrame(stat_rows2), use_container_width=True, hide_index=True)
+                    most_div = max(stat_rows2, key=lambda x: float(x["Avg # Industries"]))
+                    st.markdown(
+                        f'<div style="background:#1a2a1a; border-left:4px solid #4ff7a4; border-radius:6px; padding:10px 14px; margin:8px 0;">'
+                        f'💡 <strong>Takeaway:</strong> <b>{most_div["City"]}</b> has the most diverse industry mix.</div>',
+                        unsafe_allow_html=True
+                    )
+                    with st.expander("📚 Where it comes from & why it matters"):
+                        st.markdown("""
+                        **Source:** Count of distinct industry categories per city per year, from business registration data.
 
-        with right:
-            if use_idf and 'industry_count_new' in idf_eda.columns:
-                comp_cities2 = st.multiselect("Compare cities:", eda_cities, default=eda_cities[:3], key="eda_div_cities")
-                if comp_cities2:
-                    fig, ax = dark_fig()
-                    colors_div = ['#4f8ef7', '#f7a44f', '#4ff7a4', '#f74f4f']
-                    for i, city in enumerate(comp_cities2[:4]):
-                        cd = idf_eda[idf_eda['city_state'] == city].dropna(subset=['industry_count_new']).sort_values(['year', 'quarter'])
-                        if not cd.empty:
-                            # Annual average to reduce noise
-                            cd_annual = cd.groupby('year')['industry_count_new'].mean().reset_index()
-                            ax.plot(cd_annual['year'], cd_annual['industry_count_new'],
-                                    color=colors_div[i], linewidth=2, marker='o', markersize=3, label=city)
-                    ax.set_xlabel("Year", color='white')
-                    ax.set_ylabel("Number of distinct industries", color='white')
-                    ax.set_title("Industry Diversity Over Time — by City", color='white')
-                    ax.legend(facecolor='#1e1e2e', labelcolor='white', fontsize=8)
-                    fig.tight_layout()
-                    st.pyplot(fig); plt.close(fig)
-                    st.caption("Each point = average number of distinct industries active in that city that year. Rising = getting more diverse.")
+                        **Why it matters:** More diverse = more stable. If one industry tanks, others absorb the shock.
+                        """)
 
-    # ═══════════════════════════════════════════════════════════════════════════
-    elif "Top Industry Share" in selected_var:
-    # ═══════════════════════════════════════════════════════════════════════════
-        left, right = st.columns([1, 2])
-        with left:
-            st.markdown("#### 📊 Top Industry Share")
-            st.markdown("**In plain English:** What percentage of all businesses in a city belong to the single biggest industry? If 40% of businesses are in healthcare, the top industry share is 40%.")
-            st.markdown("**Where it comes from:** Calculated from business registration data — largest industry ÷ total businesses.")
-            st.markdown("**Why it matters:** A high share means one industry is calling the shots for that city's economy — and its housing market. If that industry grows, housing booms. If it shrinks, housing suffers.")
-            st.caption("⚠️ This is related to but different from HHI. HHI accounts for all industries; top share only looks at the #1.")
+    elif "Signal 4" in selected_var:
+        st.markdown("#### 📡 Top Industry Share (%)")
+        st.info("**What it is:** The share of all businesses belonging to the single largest industry in a city.")
 
-        with right:
-            if use_idf and 'top_industry_share_new' in idf_eda.columns:
-                comp_cities3 = st.multiselect("Compare cities:", eda_cities, default=eda_cities[:3], key="eda_top_cities")
-                if comp_cities3:
-                    fig, ax = dark_fig()
-                    colors_top = ['#4f8ef7', '#f7a44f', '#4ff7a4', '#f74f4f']
-                    for i, city in enumerate(comp_cities3[:4]):
-                        cd = idf_eda[idf_eda['city_state'] == city].dropna(subset=['top_industry_share_new']).sort_values(['year', 'quarter'])
-                        if not cd.empty:
-                            cd_annual = cd.groupby('year')['top_industry_share_new'].mean().reset_index()
-                            ax.plot(cd_annual['year'], cd_annual['top_industry_share_new'] * 100,
-                                    color=colors_top[i], linewidth=2, marker='o', markersize=3, label=city)
-                    ax.set_xlabel("Year", color='white')
-                    ax.set_ylabel("Top industry's share of all businesses (%)", color='white')
-                    ax.set_title("Top Industry Dominance Over Time — by City", color='white')
-                    ax.legend(facecolor='#1e1e2e', labelcolor='white', fontsize=8)
-                    fig.tight_layout()
-                    st.pyplot(fig); plt.close(fig)
-                    st.caption("Higher % = one industry dominates more. Watch how this changes before and after major economic events.")
+        if use_idf and 'top_industry_share_new' in idf_eda.columns:
+            comp_cities3 = eda_compare_cities or []
+            if comp_cities3:
+                fig, ax = dark_fig()
+                colors_top = ['#4f8ef7', '#f7a44f', '#4ff7a4', '#f74f4f']
+                for i, city in enumerate(comp_cities3[:4]):
+                    cd = idf_eda[idf_eda['city_state'] == city].dropna(subset=['top_industry_share_new']).sort_values(['year', 'quarter'])
+                    if not cd.empty:
+                        cd_annual = cd.groupby('year')['top_industry_share_new'].mean().reset_index()
+                        ax.plot(cd_annual['year'], cd_annual['top_industry_share_new'] * 100,
+                                color=colors_top[i], linewidth=2, marker='o', markersize=3, label=city)
+                ax.set_xlabel("Year", color='white')
+                ax.set_ylabel("Top industry share (%)", color='white')
+                ax.set_title("Top Industry Dominance Over Time — by City", color='white')
+                ax.legend(facecolor='#1e1e2e', labelcolor='white', fontsize=8)
+                fig.tight_layout()
+                st.pyplot(fig); plt.close(fig)
+                chart_note("Higher % = one industry dominates more")
+
+                stat_rows3 = []
+                for city in comp_cities3[:4]:
+                    cd = idf_eda[idf_eda['city_state'] == city].dropna(subset=['top_industry_share_new'])
+                    if not cd.empty:
+                        cd_annual = cd.groupby('year')['top_industry_share_new'].mean() * 100
+                        stat_rows3.append({
+                            "City": city,
+                            "Avg Top Share": f"{cd_annual.mean():.1f}%",
+                            "Recent Top Share": f"{cd_annual.iloc[-1]:.1f}%",
+                            "Trend": "↑ More dominant" if cd_annual.iloc[-1] > cd_annual.mean() else "↓ Less dominant"
+                        })
+                if stat_rows3:
+                    st.dataframe(pd.DataFrame(stat_rows3), use_container_width=True, hide_index=True)
+                    highest = max(stat_rows3, key=lambda x: float(x["Avg Top Share"].rstrip('%')))
+                    st.markdown(
+                        f'<div style="background:#1a2a1a; border-left:4px solid #f7a44f; border-radius:6px; padding:10px 14px; margin:8px 0;">'
+                        f'💡 <strong>Takeaway:</strong> <b>{highest["City"]}</b> has the most dominant single industry.</div>',
+                        unsafe_allow_html=True
+                    )
+                    with st.expander("📚 Where it comes from & why it matters"):
+                        st.markdown("""
+                        **Source:** Calculated from business registration data — largest industry ÷ total businesses.
+                        """)
 
     st.divider()
-
-    # ── What our model actually does ─────────────────────────────────────────
-    st.subheader("🤔 How Do We Use These Variables to Predict Housing Prices?")
-    st.markdown("""
-    Think of it like a recipe. Each variable above is an ingredient. Our model figures out 
-    **which ingredients matter most** for predicting whether a city's housing prices will go up.
-
-    Here's the idea:
-    """)
-
+    st.subheader("🤔 How Do These Variables Predict Housing Prices?")
     mc1, mc2, mc3 = st.columns(3)
     with mc1:
-        st.markdown("""
-        **Step 1: Gather ingredients**
-        - Firm founding rate
-        - Industry concentration
-        - Industry diversity
-        - Top industry share
-        """)
+        st.markdown("**1️⃣ Gather ingredients**")
+        st.caption("Firm founding rate · Industry concentration · Industry diversity · Top industry share")
     with mc2:
-        st.markdown("""
-        **Step 2: Model learns weights**  
-        The model asks: *if firm founding goes up 10%, how much does housing change?*  
-        It finds the best answer from 50 years of real data.
-        """)
+        st.markdown("**2️⃣ Model learns weights**")
+        st.caption("Which variables — at which lag — best explain why some cities' housing grew faster?")
     with mc3:
-        st.markdown("""
-        **Step 3: Be honest about limits**  
-        Housing prices depend on *many* things we don't have — interest rates, zoning, supply.  
-        A low R² score is **expected**, not a failure.
-        """)
-
+        st.markdown("**3️⃣ Be honest about limits**")
+        st.caption("Housing depends on interest rates, zoning, supply too. A low R² is expected, not a failure.")
     st.info("💡 Go to **✅ Validation & Modeling** to run the actual models and see which variables come out on top.")
 
 # ─────────────────────────────────────────────
-# EVIDENCE TAB — powered by firmscape_integrated_cbsa_quarterly_cleaned
+# EVIDENCE TAB
 # ─────────────────────────────────────────────
 if tab == "🔎 Evidence":
     st.title("What Patterns Show Up Across Cities?")
     st.markdown("Explore the relationship between industrial clustering and urban housing value.")
 
-    # ── Check for integrated dataset ──────────────────────────────────────────
     if integrated_df is None:
         import glob
         found_files = glob.glob("*.csv")
-        st.error("⚠️ Could not find the integrated dataset. Files found in current directory:")
-        st.code("\n".join(sorted(found_files)) if found_files else "No CSV files found — is app.py in the same folder as your CSVs?")
-        st.info("Looked for: firmscape_integrated_cbsa_quarterly_cleaned.csv and similar names. Rename your file to match or place it in the same folder as app.py.")
+        st.error("⚠️ Could not find the integrated dataset.")
+        st.code("\n".join(sorted(found_files)) if found_files else "No CSV files found.")
         st.stop()
     else:
         st.caption(f"✅ Loaded: `{integrated_fname}`")
 
     idf = integrated_df.copy()
-    # Detect which column holds city names
     city_col_name = idf['_city_col'].iloc[0] if '_city_col' in idf.columns else 'city_state'
-    idf['city_state'] = idf[city_col_name].astype(str)  # normalize to city_state
+    idf['city_state'] = idf[city_col_name].astype(str)
 
-    # ── Curated cities from integrated dataset ────────────────────────────────
-    # Let user pick from real cities in the dataset, defaulting to familiar ones
-    all_int_cities = sorted(idf['city_state'].unique())
-    PREFERRED = ["Austin, TX", "Detroit, MI", "San Jose, CA", "Seattle, WA", "Chicago, IL"]
-    default_cities = [c for c in PREFERRED if c in all_int_cities] or all_int_cities[:5]
+    # Build city list: curated 5 pinned at top, then rest of top-100
+    default_cities = CURATED_CITIES if CURATED_CITIES else TOP_100_CITIES[:5]
+    remaining_cities = [c for c in TOP_100_CITIES if c not in default_cities]
+    city_options = default_cities + remaining_cities  # curated 5 always appear first
 
-    # ── 1. CITY TIMELINE: Housing Price + Firm Growth Over Time ──────────────
+    # ── 1. CITY TIMELINE ─────────────────────────────────────────────────────
     st.subheader("🏙️ City Timeline: Housing Price & Firm Growth")
     st.caption("Uses quarterly FHFA / Zillow housing data and firm founding rates from 1977–present.")
 
     col_c1, col_c2 = st.columns(2)
     with col_c1:
-        # Auto-select preset city if one was loaded from Home tab
         preset_city = st.session_state.get('preset_city')
+        # Default to first curated city unless a preset has been loaded
         default_city_idx = 0
-        city_options = default_cities + [c for c in all_int_cities if c not in default_cities]
-        if preset_city and preset_city in city_options:
-            default_city_idx = city_options.index(preset_city)
-        elif preset_city:
-            # Try partial match (e.g. "San Jose, CA" vs "San Jose, CA")
-            for i, c in enumerate(city_options):
-                if preset_city.split(",")[0].lower() in c.lower():
-                    default_city_idx = i
-                    break
+        if preset_city:
+            if preset_city in city_options:
+                default_city_idx = city_options.index(preset_city)
+            else:
+                for i, c in enumerate(city_options):
+                    if preset_city.split(",")[0].lower() in c.lower():
+                        default_city_idx = i
+                        break
         city_choice = st.selectbox("Select a City:", city_options, index=default_city_idx, key="ev_city")
 
     with col_c2:
-        housing_options = [
-            "fhfa_yoy (FHFA % change YoY)",
-            "fhfa_index (FHFA Index Level)",
-            "zillow_yoy (Zillow % change YoY)",
-            "zillow_price_q (Zillow Price)"
-        ]
+        housing_label_map = {
+            "📈 % change in home prices vs. last year (FHFA)": "fhfa_yoy",
+            "🏠 Raw home price score over time (FHFA)":        "fhfa_index",
+            "📈 % change in home prices vs. last year (Zillow)": "zillow_yoy",
+            "💵 Actual median home price in dollars (Zillow)": "zillow_price_q",
+        }
         preset_metric = st.session_state.get('preset_housing_metric')
         default_metric_idx = 0
-        if preset_metric and preset_metric in housing_options:
-            default_metric_idx = housing_options.index(preset_metric)
-        housing_metric = st.selectbox("Housing Metric:", housing_options, index=default_metric_idx, key="ev_housing")
-        h_col = housing_metric.split(" ")[0]
+        if preset_metric:
+            for i, label in enumerate(housing_label_map.keys()):
+                if housing_label_map[label] in str(preset_metric):
+                    default_metric_idx = i
+                    break
+        housing_metric_label = st.selectbox(
+            "Housing Metric:", list(housing_label_map.keys()),
+            index=default_metric_idx, key="ev_housing"
+        )
+        h_col = housing_label_map[housing_metric_label]
 
-    # Show preset banner if active
     if st.session_state.get('case_study_preset'):
         active_cs = st.session_state['case_study_preset']
         active_preset = CASE_STUDY_PRESETS[active_cs]
@@ -713,196 +813,179 @@ if tab == "🔎 Evidence":
     if city_ts.empty:
         st.warning(f"No data for {city_choice}.")
     else:
-        # Build a clean x-axis from yq
-        city_ts = city_ts.dropna(subset=[h_col, 'firms_founded_yoy'], how='all')
-
+        city_ts = city_ts.dropna(subset=[h_col], how='all')
         fig_ts = go.Figure()
         fig_ts.add_trace(go.Scatter(
             x=city_ts['yq'], y=city_ts[h_col],
-            name=housing_metric.split("(")[1].rstrip(")"),
+            name=housing_metric_label,
             line=dict(color='#4f8ef7', width=2),
-            yaxis='y1'
-        ))
-        fig_ts.add_trace(go.Scatter(
-            x=city_ts['yq'], y=city_ts['firms_founded_yoy'],
-            name='Firm Founding YoY %',
-            line=dict(color='#f7a44f', width=2, dash='dot'),
-            yaxis='y2'
+            fill='tozeroy',
+            fillcolor='rgba(79,142,247,0.1)'
         ))
         fig_ts.update_layout(
-            title=f"{city_choice} — Housing vs Firm Growth Over Time",
+            title=f"{city_choice} — Home Price Change Over Time",
             template='plotly_dark',
-            yaxis=dict(title=h_col, titlefont=dict(color='#4f8ef7')),
-            yaxis2=dict(title='Firm Founding YoY %', titlefont=dict(color='#f7a44f'),
-                        overlaying='y', side='right'),
+            yaxis=dict(title=housing_metric_label, titlefont=dict(color='#4f8ef7')),
             legend=dict(x=0, y=1.1, orientation='h'),
             height=400,
             xaxis=dict(
+                title=dict(text="Quarter (Year + Quarter)", font=dict(color='white')),
                 tickmode='array',
-                tickvals=city_ts['yq'].iloc[::16].tolist(),  # tick every 4 years (16 quarters)
+                tickvals=city_ts['yq'].iloc[::16].tolist(),
                 tickangle=45
             )
         )
         st.plotly_chart(fig_ts, use_container_width=True)
-        st.caption(
-            "🔵 Housing metric (left axis) vs 🟠 Firm founding growth rate (right axis). "
-            "Look for the orange line to lead the blue — that's the signal."
-        )
+
+        hvals = city_ts[h_col].dropna()
+        if len(hvals) > 0:
+            is_pct_metric = h_col in ('fhfa_yoy', 'zillow_yoy')
+            if is_pct_metric:
+                avg_chg = hvals.mean() * 100
+                recent = hvals.iloc[-4:].mean() * 100
+                pct_pos = (hvals > 0).mean() * 100
+                trend = "accelerating" if recent > avg_chg else "slowing"
+                takeaway_ts = (
+                    f"Prices were rising in <b>{pct_pos:.0f}%</b> of quarters, "
+                    f"averaging <b>{avg_chg:.1f}% per year</b> — "
+                    f"the most recent year is <b>{trend}</b> vs. the long-run average."
+                )
+            else:
+                first_val = hvals.iloc[0]
+                last_val = hvals.iloc[-1]
+                total_chg = ((last_val - first_val) / abs(first_val)) * 100 if first_val != 0 else 0
+                direction = "risen" if total_chg > 0 else "fallen"
+                takeaway_ts = (
+                    f"Since the first recorded period, home prices have <b>{direction} {abs(total_chg):.0f}%</b> overall."
+                )
+            st.markdown(
+                f'<div style="background:#1a2a1a; border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:4px 0 12px 0;">'
+                f'💡 <strong>Takeaway:</strong> {takeaway_ts}</div>',
+                unsafe_allow_html=True
+            )
 
     st.divider()
 
-    # ── 2. SCATTER PLOT: Industry Concentration vs Housing Price Change ───────
-    st.subheader("🔵 Scatter Plot: Industry Concentration vs Housing Changes")
-    st.caption("Each dot = one city-quarter observation. Drag to zoom, hover for details.")
+    # ── 2. RELATIONSHIP CHART ─────────────────────────────────────────────────
+    st.subheader("📊 How Do Industry Variables Relate to Housing Prices?")
+    st.caption("Each dot = one city (averaged across all years). The orange line shows the overall trend.")
 
-    sc_col1, sc_col2, sc_col3 = st.columns(3)
+    sc_col1, sc_col2 = st.columns(2)
     with sc_col1:
-        x_axis = st.selectbox("X-axis (Industry Variable):", [
-            "hhi_new — Market Concentration (HHI)",
-            "top_industry_share_new — Top Industry Share",
-            "industry_count_new — # of Industries",
-            "firm_count_total — Total Firms",
-            "firms_founded_yoy — Firm Growth Rate YoY"
-        ], key="sc_x")
-        x_col = x_axis.split(" — ")[0]
+        x_label_map = {
+            "🏭 How dominated is the city by one industry? (HHI)": "hhi_new",
+            "📊 What % of firms are in the #1 industry?":          "top_industry_share_new",
+            "🌐 How many different industries exist in the city?":  "industry_count_new",
+            "📈 How fast are new businesses being founded? (YoY)": "firms_founded_yoy",
+        }
+        x_axis_label = st.selectbox("Industry variable:", list(x_label_map.keys()), key="sc_x")
+        x_col = x_label_map[x_axis_label]
 
     with sc_col2:
-        y_axis = st.selectbox("Y-axis (Housing Variable):", [
-            "fhfa_yoy — FHFA Housing % Change YoY",
-            "fhfa_index — FHFA Index Level",
-            "zillow_yoy — Zillow % Change YoY",
-            "zillow_price_q — Zillow Price Level"
-        ], key="sc_y")
-        y_col = y_axis.split(" — ")[0]
+        y_label_map = {
+            "💵 Avg home price in dollars (Zillow)":           "zillow_price_q",
+            "📈 Avg annual home price change % (FHFA)":        "fhfa_yoy",
+        }
+        y_axis_label = st.selectbox("Housing variable:", list(y_label_map.keys()), key="sc_y")
+        y_col = y_label_map[y_axis_label]
 
-    with sc_col3:
-        color_by = st.selectbox("Color dots by:", [
-            "year — Year",
-            "city_state — City"
-        ], key="sc_color")
-        color_col = color_by.split(" — ")[0]
-
-    # Year filter slider
-    yr_range = st.slider(
-        "Filter by Year Range:",
-        min_value=int(idf['year'].min()),
-        max_value=int(idf['year'].max()),
-        value=(int(idf['year'].min()), int(idf['year'].max())),
-        key="sc_yr"
-    )
-
-    sc_df = idf[
-        (idf['year'] >= yr_range[0]) & (idf['year'] <= yr_range[1])
-    ].dropna(subset=[x_col, y_col])
-
-    # Cap outliers for cleaner scatter
+    sc_df = idf.groupby('city_state')[[x_col, y_col]].mean().dropna().reset_index()
     x_p1, x_p99 = sc_df[x_col].quantile([0.01, 0.99])
     y_p1, y_p99 = sc_df[y_col].quantile([0.01, 0.99])
     sc_df = sc_df[(sc_df[x_col].between(x_p1, x_p99)) & (sc_df[y_col].between(y_p1, y_p99))]
 
     if not sc_df.empty:
-        plot_df = sc_df.sample(min(len(sc_df), 3000), random_state=42).copy()
+        is_pct = y_col == 'fhfa_yoy'
+        y_vals = sc_df[y_col] * 100 if is_pct else sc_df[y_col]
 
-        # ── Use matplotlib (no WebGL needed) ──────────────────────────────────
         fig_sc, ax_sc = plt.subplots(figsize=(10, 5))
         fig_sc.patch.set_facecolor("#0e1117")
         ax_sc.set_facecolor("#0e1117")
+        ax_sc.scatter(sc_df[x_col], y_vals, color='#4f8ef7', alpha=0.6, s=40, linewidths=0)
 
-        if color_col == 'year':
-            sc_scatter = ax_sc.scatter(
-                plot_df[x_col], plot_df[y_col],
-                c=plot_df['year'], cmap='viridis',
-                alpha=0.45, s=18, linewidths=0
-            )
-            cbar = fig_sc.colorbar(sc_scatter, ax=ax_sc)
-            cbar.ax.yaxis.set_tick_params(color='white')
-            plt.setp(cbar.ax.yaxis.get_ticklabels(), color='white')
-            cbar.set_label('Year', color='white')
-        else:
-            # Color by city — pick top 10 cities by count, grey out rest
-            top_cities = plot_df['city_state'].value_counts().head(10).index
-            cmap_cities = plt.cm.get_cmap('tab10', 10)  # type: ignore
-            for i, city in enumerate(top_cities):
-                mask = plot_df['city_state'] == city
-                ax_sc.scatter(plot_df.loc[mask, x_col], plot_df.loc[mask, y_col],
-                              color=cmap_cities(i), alpha=0.6, s=18, linewidths=0,
-                              label=city)
-            # Grey out remaining
-            other_mask = ~plot_df['city_state'].isin(top_cities)
-            ax_sc.scatter(plot_df.loc[other_mask, x_col], plot_df.loc[other_mask, y_col],
-                          color='#555', alpha=0.25, s=12, linewidths=0)
-            ax_sc.legend(fontsize=7, facecolor='#1e1e2e', labelcolor='white',
-                         markerscale=1.5, loc='upper right')
+        if len(sc_df) >= 5:
+            m, b = np.polyfit(sc_df[x_col], y_vals, 1)
+            x_line = np.linspace(sc_df[x_col].min(), sc_df[x_col].max(), 200)
+            ax_sc.plot(x_line, m * x_line + b, color='#f7a44f', linewidth=2, linestyle='--', label='Trend')
+            ax_sc.legend(facecolor='#1e1e2e', labelcolor='white', fontsize=9)
 
-        # OLS trendline using numpy (no WebGL)
-        sc_clean_plot = plot_df[[x_col, y_col]].dropna()
-        if len(sc_clean_plot) >= 5:
-            m, b = np.polyfit(sc_clean_plot[x_col], sc_clean_plot[y_col], 1)
-            x_line = np.linspace(sc_clean_plot[x_col].min(), sc_clean_plot[x_col].max(), 200)
-            ax_sc.plot(x_line, m * x_line + b, color='white', linewidth=1.5,
-                       linestyle='--', label='OLS trendline', zorder=5)
-
-        ax_sc.set_xlabel(x_axis.split(' — ')[1], color='white', fontsize=10)
-        ax_sc.set_ylabel(y_axis.split(' — ')[1], color='white', fontsize=10)
-        ax_sc.set_title(
-            f"{x_axis.split(' — ')[1]}  vs  {y_axis.split(' — ')[1]}",
-            color='white', fontsize=12
-        )
+        x_label_short = x_axis_label.split("(")[0].strip().lstrip("🏭📊🌐📈").strip()
+        x_unit = "(0 = perfectly diverse, 1 = one industry dominates)" if x_col == "hhi_new" else \
+                 "(0% = no dominance, 100% = one industry has all firms)" if x_col == "top_industry_share_new" else \
+                 "(count of distinct industry types)" if x_col == "industry_count_new" else \
+                 "(0 = no growth, 0.5 = 50% more firms than last year)"
+        y_label_short = "Avg home price ($)" if not is_pct else "Avg annual price change (%/yr)"
+        ax_sc.set_xlabel(f"{x_label_short}\n{x_unit}", color='white', fontsize=9)
+        ax_sc.set_ylabel(y_label_short, color='white', fontsize=10)
+        ax_sc.set_title(f"{x_label_short} vs. {y_label_short}", color='white', fontsize=12)
         ax_sc.tick_params(colors='white')
         ax_sc.spines[:].set_color('#333')
+        ax_sc.axhline(0, color='#555', linewidth=0.8, linestyle=':')
         fig_sc.tight_layout()
         st.pyplot(fig_sc)
         plt.close(fig_sc)
 
-        # Correlation stats below chart
         sc_clean = sc_df[[x_col, y_col]].dropna()
         if len(sc_clean) >= 5 and sc_clean[x_col].std() > 0 and sc_clean[y_col].std() > 0:
             r_sc, p_sc = pearsonr(sc_clean[x_col], sc_clean[y_col])
-            r2_sc = r_sc ** 2
-            sig = "✅ Significant" if p_sc < 0.05 else "❌ Not significant"
-            sc_c1, sc_c2, sc_c3, sc_c4 = st.columns(4)
-            sc_c1.metric("Pearson R", f"{r_sc:.3f}")
-            sc_c2.metric("R²", f"{r2_sc:.3f}")
-            sc_c3.metric("P-Value", f"{p_sc:.4f}")
-            sc_c4.metric("N (points)", f"{len(sc_clean):,}")
-            st.caption(
-                f"{sig} (p {'<' if p_sc < 0.05 else '≥'} 0.05). "
-                f"R² = {r2_sc:.3f} means {x_axis.split(' — ')[1]} explains ~{r2_sc*100:.1f}% "
-                f"of variance in {y_axis.split(' — ')[1]}. Low R² is expected — many factors drive housing prices."
+            sig = "significant" if p_sc < 0.05 else "not significant"
+            x_descriptions = {
+                "hhi_new":               "more economically concentrated cities (dominated by one industry)",
+                "top_industry_share_new": "cities where one industry makes up a larger share of all firms",
+                "industry_count_new":    "cities with more diverse industry types",
+                "firms_founded_yoy":     "cities where new businesses are being founded faster",
+            }
+            x_desc = x_descriptions.get(x_col, f"cities with more {x_label_short.lower()}")
+            y_desc = "home prices" if not is_pct else "annual home price growth"
+            higher_lower = "higher" if r_sc > 0 else "lower"
+            sig_phrase = "a statistically significant finding" if p_sc < 0.05 else "not statistically significant — could be noise"
+            sc_c1, sc_c2, sc_c3 = st.columns(3)
+            sc_c1.metric("Correlation (R)", f"{r_sc:.3f}")
+            sc_c2.metric("Strength (R²)", f"{r_sc**2:.3f}")
+            sc_c3.metric("Statistically significant?", "Yes ✅" if p_sc < 0.05 else "No ❌")
+            takeaway_sc = (
+                f"On average, <b>{x_desc}</b> tend to have <b>{higher_lower} {y_desc}</b> "
+                f"(R={r_sc:.2f}) — {sig_phrase}."
+            )
+            st.markdown(
+                f'<div style="background:#1a2a1a; border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:8px 0;">'
+                f'💡 <strong>Takeaway:</strong> {takeaway_sc}</div>',
+                unsafe_allow_html=True
             )
     else:
-        st.warning("No data available for this combination. Adjust the year range or axes.")
+        st.warning("No data available for this combination.")
 
     st.divider()
 
-    # ── 3. MULTI-CITY HOUSING TREND (time series, up to 5 cities) ────────────
+    # ── 3. MULTI-CITY HOUSING TREND ───────────────────────────────────────────
     st.subheader("📈 Compare Housing Trends Across Cities")
 
     mc_cities = st.multiselect(
         "Select cities to compare (up to 5):",
-        all_int_cities,
-        default=default_cities[:3],
+        city_options,          # curated 5 appear first in the dropdown
+        default=default_cities,  # all 5 curated cities pre-selected
         key="mc_cities"
     )
-    mc_metric = st.selectbox(
-        "Housing metric to compare:",
-        ["fhfa_yoy", "fhfa_index", "zillow_yoy", "zillow_price_q"],
-        key="mc_metric"
-    )
+    mc_metric_map = {
+        "📈 % change in home prices vs. last year (FHFA)":   "fhfa_yoy",
+        "🏠 Raw home price score over time (FHFA)":          "fhfa_index",
+        "📈 % change in home prices vs. last year (Zillow)": "zillow_yoy",
+        "💵 Actual median home price in dollars (Zillow)":   "zillow_price_q",
+    }
+    mc_metric_label = st.selectbox("Housing metric to compare:", list(mc_metric_map.keys()), key="mc_metric")
+    mc_metric = mc_metric_map[mc_metric_label]
 
     if mc_cities:
         mc_df = idf[idf['city_state'].isin(mc_cities[:5])].dropna(subset=[mc_metric])
         mc_df = mc_df.sort_values(['city_state', 'year', 'quarter'])
-
         fig_mc = px.line(
             mc_df, x='yq', y=mc_metric,
             color='city_state',
             labels={'yq': 'Quarter', mc_metric: mc_metric, 'city_state': 'City'},
             template='plotly_dark',
-            title=f"{mc_metric} — Multi-City Comparison",
+            title=f"{mc_metric_label} — Multi-City Comparison",
             height=400
         )
-        # Only show every 4th year on x axis
         all_yqs = sorted(mc_df['yq'].unique())
         tick_yqs = all_yqs[::16]
         fig_mc.update_xaxes(tickmode='array', tickvals=tick_yqs, tickangle=45)
@@ -919,7 +1002,6 @@ if tab == "🔎 Evidence":
         if len(city_ts_inf) < 8:
             st.info(f"Not enough quarterly data for {city_choice} to detect an inflection point.")
         else:
-            # Find quarter with max acceleration in firm growth
             city_ts_inf = city_ts_inf.copy()
             city_ts_inf['firm_accel'] = city_ts_inf['firms_founded_yoy'].diff()
             idx_max = city_ts_inf['firm_accel'].idxmax()
@@ -930,7 +1012,6 @@ if tab == "🔎 Evidence":
             growth_before = city_ts_inf[city_ts_inf['year'] < inf_year]['firms_founded_yoy'].mean()
             growth_after = city_ts_inf[city_ts_inf['year'] >= inf_year]['firms_founded_yoy'].mean()
 
-            # Post-inflection housing correlation
             post = city_ts_inf[city_ts_inf['year'] >= inf_year].dropna(subset=['firms_founded_yoy', 'fhfa_yoy'])
             if len(post) >= 4 and post['firms_founded_yoy'].std() > 0 and post['fhfa_yoy'].std() > 0:
                 r_post, p_post = pearsonr(post['firms_founded_yoy'], post['fhfa_yoy'])
@@ -945,28 +1026,22 @@ if tab == "🔎 Evidence":
             c1.metric("Firm Growth Before", f"{growth_before:.1f}%")
             c2.metric("Firm Growth After", f"{growth_after:.1f}%")
             c3.metric("Post-Inflection R²", str(r2_post))
-            st.caption(f"P-value after inflection: {p_label}. R² measures how much firm growth explains housing price changes after the inflection.")
+            st.caption(f"P-value after inflection: {p_label}.")
 
-            # Chart: firm growth over time with inflection marked
             fig_inf, ax = plt.subplots(figsize=(10, 3.5))
             ax.plot(range(len(city_ts_inf)), city_ts_inf['firms_founded_yoy'].values,
                     color='#f7a44f', linewidth=2, label='Firm Growth YoY %')
             ax.plot(range(len(city_ts_inf)), city_ts_inf['fhfa_yoy'].values,
                     color='#4f8ef7', linewidth=2, label='FHFA YoY %', alpha=0.8)
-
-            # Mark inflection
             inf_pos = city_ts_inf.index.get_loc(idx_max)
             ax.axvline(inf_pos, color='yellow', linestyle='--', linewidth=1.5, label=f'Inflection ({inf_yq})')
             ax.axvspan(inf_pos, min(inf_pos + 8, len(city_ts_inf) - 1),
                        color='yellow', alpha=0.12, label='Post-Inflection Window')
-
-            # X ticks at years
             year_ticks = city_ts_inf.reset_index(drop=True)
             tick_positions = year_ticks[year_ticks['quarter'] == 1].index[::4].tolist()
             tick_labels = year_ticks.loc[tick_positions, 'year'].astype(str).tolist()
             ax.set_xticks(tick_positions)
             ax.set_xticklabels(tick_labels, rotation=45, color='white', fontsize=8)
-
             ax.set_facecolor("#0e1117")
             fig_inf.patch.set_facecolor("#0e1117")
             ax.tick_params(colors="white")
@@ -977,7 +1052,7 @@ if tab == "🔎 Evidence":
             st.pyplot(fig_inf)
 
 # ─────────────────────────────────────────────
-# VALIDATION & MODELING TAB (revised)
+# VALIDATION & MODELING TAB
 # ─────────────────────────────────────────────
 if tab == "✅ Validation & Modeling":
     st.title("✅ Validation & Interactive Modeling")
@@ -987,7 +1062,6 @@ if tab == "✅ Validation & Modeling":
         "Our goal is to find *which variables matter most*, not to overfit."
     )
 
-    # --- MODEL SELECTION ---
     st.subheader("Step 1: Choose a Model")
     model_choice = st.selectbox(
         "Select a model to run:",
@@ -995,7 +1069,6 @@ if tab == "✅ Validation & Modeling":
         key="model_selector"
     )
 
-    # --- HYPOTHESIS SELECTION ---
     st.subheader("Step 2: Choose a Hypothesis")
     hypothesis = st.selectbox(
         "What relationship are we testing?",
@@ -1007,7 +1080,6 @@ if tab == "✅ Validation & Modeling":
         key="hyp_selector"
     )
 
-    # --- LAG TESTING ---
     st.subheader("Step 3: Lag & Significance Testing")
     col_v1, col_v2 = st.columns([1, 2])
 
@@ -1040,7 +1112,6 @@ if tab == "✅ Validation & Modeling":
                 m3.metric("R² (Variance Explained)", f"{r2:.3f}")
                 st.write(f"Sample Size: **{len(clean_val):,} data points**")
 
-    # --- PRACTICAL SIGNIFICANCE ---
     st.divider()
     st.subheader("Step 4: Practical Significance")
     if not clean_val.empty and (not sig_filter or p_val < 0.05):
@@ -1049,13 +1120,9 @@ if tab == "✅ Validation & Modeling":
         **{10 * slope:.2f}%** change in housing growth **{lag_years} year(s)** later.
 
         **R² = {r2:.3f}** — Industry concentration explains roughly **{r2*100:.1f}%** of housing 
-        price variance. The remaining {(1-r2)*100:.1f}% is driven by other factors (interest rates, 
-        supply, zoning, demographics). This is expected and does not invalidate the model.
-
-        *(Note: This indicates association, not direct causation)*
+        price variance. The remaining {(1-r2)*100:.1f}% is driven by other factors.
         """)
 
-    # --- INTERACTIVE MODEL RUN ---
     st.divider()
     st.subheader("Step 5: Run the Model Interactively")
 
@@ -1067,8 +1134,6 @@ if tab == "✅ Validation & Modeling":
         from sklearn.preprocessing import LabelEncoder
 
         model_df = clean_val.copy()
-
-        # Feature engineering
         le = LabelEncoder()
         if 'industry' in model_df.columns:
             model_df['industry_enc'] = le.fit_transform(model_df['industry'].fillna("Unknown"))
@@ -1080,7 +1145,7 @@ if tab == "✅ Validation & Modeling":
             .nunique()
             .reset_index()
             .rename(columns={"industry": "diversity"})
-        )
+        ) if 'industry' in merged_companies_housing.columns else pd.DataFrame(columns=["city_x","year_int","diversity"])
         model_df = model_df.merge(div_df, on=["city_x", "year_int"], how="left")
         model_df['diversity'] = model_df['diversity'].fillna(1)
 
@@ -1089,15 +1154,13 @@ if tab == "✅ Validation & Modeling":
 
         X = model_df[features].dropna()
         y = model_df.loc[X.index, target]
-
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
         if "XGBoost" in model_choice:
             try:
-                import xgboost as xgb
                 model = xgb.XGBRegressor(n_estimators=100, max_depth=4, random_state=42, verbosity=0)
                 model_label = "XGBoost"
-            except ImportError:
+            except Exception:
                 model = GradientBoostingRegressor(n_estimators=100, max_depth=4, random_state=42)
                 model_label = "Gradient Boosting (XGBoost fallback)"
         elif "Random Forest" in model_choice:
@@ -1114,50 +1177,33 @@ if tab == "✅ Validation & Modeling":
 
         st.success(f"**{model_label} Results:**")
         rc1, rc2 = st.columns(2)
-        rc1.metric("R² Score", f"{r2:.4f}", help="Fraction of variance explained. Low R² is expected — industry is one of many factors.")
+        rc1.metric("R² Score", f"{r2:.4f}")
         rc2.metric("RMSE", f"{rmse:.4f}")
+        st.caption(f"💡 R² = {r2:.3f} means industry variables explain ~{r2*100:.1f}% of housing price variance.")
 
-        st.caption(
-            f"💡 R² = {r2:.3f} means industry variables explain ~{r2*100:.1f}% of housing price variance. "
-            "This is honest — not a weakness. There are many confounding variables. "
-            "The value is in knowing *which variables* are most predictive."
-        )
-
-        # Feature importance
         if hasattr(model, 'feature_importances_'):
             fi = pd.DataFrame({
                 "Feature": ["Company Growth %", "Industry Type", "Industry Diversity"],
                 "Importance": model.feature_importances_
             }).sort_values("Importance", ascending=True)
-
-            fig_fi = px.bar(
-                fi, x="Importance", y="Feature", orientation="h",
+            fig_fi = px.bar(fi, x="Importance", y="Feature", orientation="h",
                 color="Importance", color_continuous_scale="Blues",
                 template="plotly_dark",
-                title="Feature Importance — Which Variables Drive Housing Price Changes?"
-            )
+                title="Feature Importance — Which Variables Drive Housing Price Changes?")
             st.plotly_chart(fig_fi, use_container_width=True)
-            st.caption(
-                "📌 Feature importance shows which variables contribute most to the model's predictions. "
-                "Use this alongside the EDA Explorer to understand *why* a variable matters."
-            )
         elif model_label == "Linear Regression":
             coef_df = pd.DataFrame({
                 "Feature": ["Company Growth %", "Industry Type", "Industry Diversity"],
                 "Coefficient": model.coef_
             }).sort_values("Coefficient", key=abs, ascending=True)
-            fig_coef = px.bar(
-                coef_df, x="Coefficient", y="Feature", orientation="h",
+            fig_coef = px.bar(coef_df, x="Coefficient", y="Feature", orientation="h",
                 color="Coefficient", color_continuous_scale="RdBu",
-                template="plotly_dark",
-                title="Linear Regression Coefficients"
-            )
+                template="plotly_dark", title="Linear Regression Coefficients")
             st.plotly_chart(fig_coef, use_container_width=True)
 
-    # --- COMPARE CITIES (curated, professor said 3-5 familiar cities) ---
     st.divider()
     st.subheader("Step 6: Compare Curated Cities")
-    st.caption("We compare a curated set of economically distinct cities to avoid overwhelming comparisons.")
+    st.caption("Comparing the top data-rich cities matching each iconic case study.")
 
     selected_cities = st.multiselect(
         "Select cities to compare (max 5):",
@@ -1174,7 +1220,6 @@ if tab == "✅ Validation & Modeling":
                 try:
                     x_vals = data_c['pct_change'].values
                     y_vals = data_c['lagged_housing'].values
-                    # Guard: pearsonr is undefined if either array is constant
                     if x_vals.std() == 0 or y_vals.std() == 0:
                         raise ValueError("Constant array")
                     r_c, p_c = pearsonr(x_vals, y_vals)
@@ -1197,13 +1242,8 @@ if tab == "✅ Validation & Modeling":
                     "City": city, "Lag Correlation (R)": "n/a",
                     "R²": "n/a", "P-Value": "n/a", "Data Points": len(data_c), "Significant": "⚠️ Too few"
                 })
-
         if city_results:
             st.dataframe(pd.DataFrame(city_results), use_container_width=True)
-            st.caption(
-                "📌 R² values are expected to be low — this means industry data alone doesn't fully predict housing prices. "
-                "Significant p-values confirm the relationship exists even if partial."
-            )
 
 # ─────────────────────────────────────────────
 # OPPORTUNITY LAB TAB
@@ -1211,11 +1251,9 @@ if tab == "✅ Validation & Modeling":
 if tab == "🚀 Opportunity Lab":
     st.title("🚀 Opportunity Lab: The 'Next Hub' Finder")
     st.markdown(
-        "Build your own investment shortlist by weighting the economic signals that matter most to you. "
-        "Uses the **firmscape_integrated_quarterly** dataset when available."
+        "Build your own investment shortlist by weighting the economic signals that matter most to you."
     )
 
-    # Use integrated dataset if available, else fallback
     if integrated_df is not None:
         opp_df_source = integrated_df.copy()
         city_col = 'city_state'
@@ -1229,7 +1267,6 @@ if tab == "🚀 Opportunity Lab":
         div_col = None
         st.warning("⚠️ Integrated dataset not found — using merged_companies_housing fallback.")
 
-    # Strategy weights
     with st.sidebar:
         st.header("⚖️ Strategy Weights")
         w_growth = st.slider("Company Growth", 0.0, 1.0, 0.4, key="w_growth")
@@ -1239,15 +1276,11 @@ if tab == "🚀 Opportunity Lab":
         st.divider()
         lookback = st.slider("Analysis Window (Years)", 1, 5, 3, key="lookback")
 
-        st.caption(
-            "💡 These weights reflect *your priorities* as a "
-            + ("housing investor." if stakeholder == "🏠 Housing Investor"
-               else "business analyst." if stakeholder == "📊 Business Analyst"
-               else "researcher.")
-        )
-
-    # Score computation
     opp_df = opp_df_source.copy()
+    if integrated_df is not None:
+        city_col_name2 = opp_df['_city_col'].iloc[0] if '_city_col' in opp_df.columns else 'city_state'
+        opp_df['city_state'] = opp_df[city_col_name2].astype(str)
+        city_col = 'city_state'
 
     if div_col and div_col in opp_df.columns:
         city_stats = opp_df.groupby(city_col).agg(
@@ -1258,7 +1291,7 @@ if tab == "🚀 Opportunity Lab":
         city_stats = opp_df.groupby(city_col).agg(
             growth=(growth_col, 'mean')
         ).reset_index()
-        city_stats['diversity'] = 1  # fallback
+        city_stats['diversity'] = 1
 
     for col in ['growth', 'diversity']:
         rng = city_stats[col].max() - city_stats[col].min()
@@ -1272,10 +1305,8 @@ if tab == "🚀 Opportunity Lab":
         city_stats['diversity_norm'] * w_diversity
     ) * 100
 
-    # Leaderboard
     st.subheader("🏆 The 'Next Hub' Leaderboard")
     top_10 = city_stats.sort_values('Final_Score', ascending=False).head(10)
-
     fig_lead = px.bar(
         top_10, x='Final_Score', y=city_col, orientation='h',
         color='Final_Score', color_continuous_scale='Viridis',
@@ -1284,18 +1315,11 @@ if tab == "🚀 Opportunity Lab":
     )
     fig_lead.update_layout(yaxis={'categoryorder': 'total ascending'}, height=400)
     st.plotly_chart(fig_lead, use_container_width=True)
+    st.caption("📌 Scores reflect a weighted combination of company growth and industry diversity.")
 
-    st.caption(
-        "📌 Scores reflect a weighted combination of company growth and industry diversity. "
-        "Adjust the sliders to match your investment priorities. "
-        "This is a screening tool — always validate with additional data sources."
-    )
-
-    # What-If Shock Simulator
     st.divider()
     st.subheader("⚡ What-If Shock Simulator")
     col_s1, col_s2 = st.columns([1, 2])
-
     with col_s1:
         target_city = st.selectbox("Pick a City to Shock:", top_10[city_col].tolist())
         shock_type = st.selectbox("Scenario:", [
@@ -1303,27 +1327,19 @@ if tab == "🚀 Opportunity Lab":
             "Manufacturing Decline (-15%)",
             "Housing Spike (+10%)"
         ])
-
         if st.button("Run Simulation"):
             base_score = city_stats.loc[city_stats[city_col] == target_city, 'Final_Score'].values[0]
             sim_score = base_score * 1.2 if "+" in shock_type else base_score * 0.85
-
             with col_s2:
                 st.write(f"### Result for {target_city}")
                 st.metric("Simulated Score", f"{sim_score:.1f}", delta=f"{sim_score - base_score:.1f}")
                 st.write(f"This shock would move **{target_city}** on the leaderboard relative to current weights.")
-                st.caption(
-                    "Note: Shock simulations apply a simple multiplier to illustrate directional impact. "
-                    "Real impacts depend on many market factors."
-                )
 
-    # Judge's Shortlist
     st.divider()
     if st.button("🎯 Generate Judge's Shortlist"):
         st.subheader("Top 3 High-Conviction Cities")
         final_3 = top_10.head(3)
         cols = st.columns(3)
-
         for i, (_, row) in enumerate(final_3.iterrows()):
             city_name = row[city_col]
             with cols[i]:
@@ -1332,10 +1348,5 @@ if tab == "🚀 Opportunity Lab":
                 st.write(f"📈 **Growth:** {row['growth']:.2f}% avg")
                 st.write(f"🏭 **Diversity:** {row['diversity']:.0f} industries")
                 st.write(f"✅ **Why:** High industrial momentum.")
-                st.write(f"⚠️ **Risk:** Industry data partially predicts housing — verify with macro factors.")
-
-        st.caption(
-            "💡 These cities score highest given your current weight settings. "
-            "Low R² in the model is a reminder: use this as a starting point for deeper due diligence, "
-            "not a definitive prediction."
-        )
+                st.write(f"⚠️ **Risk:** Use as screening tool — validate with macro factors.")
+        st.caption("💡 These cities score highest given your current weight settings.")
