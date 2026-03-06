@@ -254,103 +254,150 @@ if 'preset_housing_metric' not in st.session_state:
 # ─────────────────────────────────────────────
 if tab == "🏠 Home":
     st.title("FirmScape")
-    st.markdown("##### *Industry shifts move housing prices. We built the tool to see it coming.*")
-    st.divider()
 
-    c_left, c_right = st.columns([2, 1])
-    with c_left:
-        st.markdown("""
-        **We're building FirmScape for two customers:**
-
-        🏠 **Housing investors & urban analysts** who want to know *which cities are about to heat up* — 
-        before the housing market prices it in.
-
-        📊 **Business strategists & city planners** who need to understand *how industry clustering 
-        shapes economic trajectories* — and where to place their next bet.
-
-        **The value we deliver:**
-        > *When industries cluster and grow in a city, how do housing prices move — now and later?*  
-        > FirmScape turns 50 years of firm founding and housing data into a single, interactive signal.
-        """)
-    with c_right:
-        st.markdown("####")
-        st.metric("Cities / metros", "13,330")
-        st.metric("Years of data", "50")
-        st.metric("Companies tracked", "275,438")
-        st.metric("Data coverage", "96%")
-
-    st.divider()
-
-    with st.expander("⚠️ What this model does — and doesn't — claim"):
-        st.markdown("""
-        Housing prices are driven by **many factors** (interest rates, zoning, supply, demographics).  
-        FirmScape focuses on one question: **how much does industry structure explain?**
-
-        - A **low R²** is *expected and honest* — industry data is one signal among many
-        - We don't chase high p-values at the cost of validity
-        - Use FirmScape as a **leading indicator**, not a complete forecast
-        - Goal: identify *which industry variables are most predictive*, then layer in other factors
-        """)
-
-    st.divider()
-
-    st.subheader("🗺️ Explore a Famous Case Study")
-    st.markdown("Pick a city whose story you know — then follow the data to see if the numbers match the narrative.")
-
-    cs_names = list(CASE_STUDY_PRESETS.keys())
-    selected_cs = st.selectbox("Pick a famous case study:", cs_names, index=0, key="home_case_study")
-    preset = CASE_STUDY_PRESETS[selected_cs]
-
-    # city_full is the exact dataset city name — always valid since presets are data-driven
-    city_full = preset.get('city_full', CURATED_CITIES[0])
-
-    st.markdown(f"""
-    <div style="background: #1a1f2e; border-left: 4px solid #4f8ef7; border-radius: 8px; padding: 20px; margin: 12px 0;">
-        <h3 style="margin:0; color:white;">{preset['emoji']} {selected_cs}</h3>
-        <p style="color: #aab4c8; margin: 10px 0 4px 0; font-size:0.85em;">📍 Dataset city: <strong style="color:#4f8ef7">{city_full}</strong></p>
-        <p style="color: #aab4c8; margin: 6px 0 6px 0;">{preset['story']}</p>
-        <p style="color: #f7a44f; font-size: 0.88em; margin:0;">
-            📌 <strong>What to look for:</strong> {preset['what_to_look_for']}
+    # Research question — always shown
+    st.markdown("""
+    <div style="background:#1a1f2e; border-left:4px solid #4f8ef7; border-radius:8px; padding:14px 20px; margin-bottom:16px;">
+        <p style="color:#aab4c8; font-size:1.05em; margin:0;">
+            <strong style="color:white;">Research Question:</strong>
+            <em> When industries cluster and grow in a city, how do housing prices move — now and later?</em>
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-    if st.button(f"🚀 Load {selected_cs} preset → jump to Evidence tab", type="primary"):
-        st.session_state['case_study_preset'] = selected_cs
-        st.session_state['preset_city'] = city_full   # exact dataset name, guaranteed valid
-        st.session_state['preset_housing_metric'] = preset['housing_metric']
-        st.success(
-            f"✅ Preset loaded! Navigate to **🔎 Evidence** in the sidebar — "
-            f"it's now pre-set to **{city_full}** with **{preset['housing_metric']}**."
-        )
+    st.divider()
 
-    if st.session_state.get('case_study_preset'):
-        active = st.session_state['case_study_preset']
-        active_city = st.session_state.get('preset_city', CURATED_CITIES[0])
+    c_left, c_right = st.columns([2, 1])
+
+    if stakeholder == "🏠 Housing Investor":
+        with c_left:
+            st.markdown("##### *Spot cities about to heat up — before the market prices it in.*")
+            st.markdown("""
+            Industry growth is a **leading indicator** for housing demand — typically 1–2 years ahead.
+
+            **Start here:** → Evidence → Opportunity Lab
+            """)
+            with st.expander("⚠️ Scope & limits"):
+                st.markdown("This is a **screening tool**, not a price forecast. Always layer in macro factors (rates, supply, zoning) before acting.")
+        with c_right:
+            st.metric("Cities / metros", "13,330")
+            st.metric("Years of data", "50")
+            st.metric("Avg lag signal", "1–2 yrs")
+            st.metric("Data coverage", "96%")
+
+    elif stakeholder == "📊 Business Analyst":
+        with c_left:
+            st.markdown("##### *Quantify how industry structure drives housing price changes.*")
+            st.markdown("""
+            Test which variables — HHI, firm founding rate, diversity — are statistically predictive and at what lag.
+
+            **Start here:** → EDA Explorer → Validation & Modeling
+            """)
+            with st.expander("⚠️ Scope & limits"):
+                st.markdown("A **low R²** is expected — industry structure is one signal among many. Goal: identify which variables matter most, not build a complete model.")
+        with c_right:
+            st.metric("Predictive variables", "4")
+            st.metric("Models available", "3")
+            st.metric("Lag options", "0–3 yrs")
+            st.metric("Data coverage", "96%")
+
+    else:  # Researcher
+        with c_left:
+            st.markdown("##### *50 years of quarterly panel data across 13,330 CBSAs.*")
+            st.markdown("""
+            All R², p-values, and lag structures shown transparently. Inspect data pipeline and methodology.
+
+            **Start here:** → Build the Dataset → Validation & Modeling
+            """)
+            with st.expander("⚠️ Methodological notes"):
+                st.markdown("""
+                - All correlations are **associative** — no causal identification
+                - Panel is **unbalanced** — smaller metros have fewer observations
+                - Firm data reflects **registration**, not operational firms (survivorship bias applies)
+                """)
+        with c_right:
+            st.metric("CBSAs covered", "13,330")
+            st.metric("Quarterly obs.", "275,438")
+            st.metric("Years of panel", "50")
+            st.metric("Data coverage", "96%")
+
+    st.divider()
+
+    st.subheader("🗺️ Explore a Case Study")
+    cs_names = list(CASE_STUDY_PRESETS.keys())
+    selected_cs = st.selectbox("Pick a city:", cs_names, index=0, key="home_case_study")
+    preset = CASE_STUDY_PRESETS[selected_cs]
+    city_full = preset.get("city_full", CURATED_CITIES[0])
+
+    st.markdown(f"""
+    <div style="background: #1a1f2e; border-left: 4px solid #4f8ef7; border-radius: 8px; padding: 20px; margin: 12px 0;">
+        <h3 style="margin:0; color:white;">{preset["emoji"]} {selected_cs}</h3>
+        <p style="color: #aab4c8; margin: 10px 0 4px 0; font-size:0.85em;">📍 Dataset city: <strong style="color:#4f8ef7">{city_full}</strong></p>
+        <p style="color: #aab4c8; margin: 6px 0 6px 0;">{preset["story"]}</p>
+        <p style="color: #f7a44f; font-size: 0.88em; margin:0;">
+            📌 <strong>What to look for:</strong> {preset["what_to_look_for"]}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.button(f"🚀 Load {selected_cs} → jump to Evidence tab", type="primary"):
+        st.session_state["case_study_preset"] = selected_cs
+        st.session_state["preset_city"] = city_full
+        st.session_state["preset_housing_metric"] = preset["housing_metric"]
+        st.success(f"✅ Preset loaded! Go to **🔎 Evidence** — pre-set to **{city_full}**.")
+
+    if st.session_state.get("case_study_preset"):
+        active = st.session_state["case_study_preset"]
+        active_city = st.session_state.get("preset_city", CURATED_CITIES[0])
         st.info(f"📍 Active preset: **{active}** → {active_city}. Go to **🔎 Evidence** to explore.")
 
     st.divider()
 
     st.subheader("How to use FirmScape")
     hw1, hw2, hw3, hw4 = st.columns(4)
-    with hw1:
-        st.markdown("**1️⃣ EDA Explorer**")
-        st.caption("Understand each variable — what it is, where it comes from, why it matters for housing prices.")
-    with hw2:
-        st.markdown("**2️⃣ Evidence**")
-        st.caption("City timelines, scatter plots, and multi-city comparisons powered by 50 years of quarterly data.")
-    with hw3:
-        st.markdown("**3️⃣ Validation & Modeling**")
-        st.caption("Run XGBoost, Random Forest, or Linear Regression — see which variables are truly predictive.")
-    with hw4:
-        st.markdown("**4️⃣ Opportunity Lab**")
-        st.caption("Weight the signals that matter to you and generate a 'Next Hub' shortlist.")
+
+    if stakeholder == "🏠 Housing Investor":
+        with hw1:
+            st.markdown("**1️⃣ EDA Explorer**")
+            st.caption("Learn what each variable measures.")
+        with hw2:
+            st.markdown("**2️⃣ Evidence**")
+            st.caption("See if firm growth leads housing in your target city.")
+        with hw3:
+            st.markdown("**3️⃣ Validation**")
+            st.caption("Check which signals are statistically significant.")
+        with hw4:
+            st.markdown("**4️⃣ Opportunity Lab ⭐**")
+            st.caption("Build your investment shortlist.")
+    elif stakeholder == "📊 Business Analyst":
+        with hw1:
+            st.markdown("**1️⃣ EDA Explorer ⭐**")
+            st.caption("Variable definitions, distributions, city comparisons.")
+        with hw2:
+            st.markdown("**2️⃣ Evidence**")
+            st.caption("Scatter plots and multi-city trend comparisons.")
+        with hw3:
+            st.markdown("**3️⃣ Validation ⭐**")
+            st.caption("Run models, compare R², test lags.")
+        with hw4:
+            st.markdown("**4️⃣ Opportunity Lab**")
+            st.caption("Sensitivity analysis with custom weights.")
+    else:
+        with hw1:
+            st.markdown("**1️⃣ Build the Dataset ⭐**")
+            st.caption("Full pipeline: sources, cleaning, joins.")
+        with hw2:
+            st.markdown("**2️⃣ EDA Explorer**")
+            st.caption("Variable properties and data quality.")
+        with hw3:
+            st.markdown("**3️⃣ Validation ⭐**")
+            st.caption("p-values, R², lag structures — full output.")
+        with hw4:
+            st.markdown("**4️⃣ Evidence**")
+            st.caption("Inspect city-level time series.")
 
     st.caption("*Disclaimer: No causal claims — all findings are associative and data-driven.*")
 
-# ─────────────────────────────────────────────
-# BUILD THE DATASET TAB
-# ─────────────────────────────────────────────
 if tab == "🧩 Build the Dataset":
     st.title("From Messy Sources to One City Timeline")
 
@@ -731,13 +778,13 @@ if tab == "📊 EDA Explorer":
     st.subheader("🤔 How Do These Variables Predict Housing Prices?")
     mc1, mc2, mc3 = st.columns(3)
     with mc1:
-        st.markdown("**1️⃣ Gather ingredients**")
+        st.markdown("**1️⃣ Select variables**")
         st.caption("Firm founding rate · Industry concentration · Industry diversity · Top industry share")
     with mc2:
         st.markdown("**2️⃣ Model learns weights**")
         st.caption("Which variables — at which lag — best explain why some cities' housing grew faster?")
     with mc3:
-        st.markdown("**3️⃣ Be honest about limits**")
+        st.markdown("**3️⃣ Interpret with context**")
         st.caption("Housing depends on interest rates, zoning, supply too. A low R² is expected, not a failure.")
     st.info("💡 Go to **✅ Validation & Modeling** to run the actual models and see which variables come out on top.")
 
@@ -879,7 +926,7 @@ if tab == "🔎 Evidence":
 
     # ── 2. RELATIONSHIP CHART ─────────────────────────────────────────────────
     st.subheader("📊 How Do Industry Variables Relate to Housing Prices?")
-    st.caption("Each dot = one city (averaged across all years). The orange line shows the overall trend.")
+    st.caption("Each dot = one city (averaged across all years). The orange line shows the overall trend. **R² here is cross-city — it does not change with the city selected above.**")
 
     sc_col1, sc_col2 = st.columns(2)
     with sc_col1:
@@ -966,7 +1013,10 @@ if tab == "🔎 Evidence":
     else:
         st.warning("No data available for this combination.")
 
+
     st.divider()
+
+
 
     # ── 3. MULTI-CITY HOUSING TREND ───────────────────────────────────────────
     st.subheader("📈 Compare Housing Trends Across Cities")
