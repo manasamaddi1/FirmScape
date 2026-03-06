@@ -10,6 +10,11 @@ import plotly.express as px         # type: ignore
 import plotly.graph_objects as go   # type: ignore
 from scipy.stats import pearsonr    # type: ignore
 import xgboost as xgb
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.preprocessing import LabelEncoder
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -800,6 +805,12 @@ if tab == "🔎 Evidence":
         )
         h_col = housing_label_map[housing_metric_label]
 
+    # Clear preset banner if user manually picked a different city
+    if st.session_state.get('preset_city') and city_choice != st.session_state.get('preset_city'):
+        st.session_state['case_study_preset'] = None
+        st.session_state['preset_city'] = None
+        st.session_state['preset_housing_metric'] = None
+
     if st.session_state.get('case_study_preset'):
         active_cs = st.session_state['case_study_preset']
         active_preset = CASE_STUDY_PRESETS[active_cs]
@@ -1127,11 +1138,7 @@ if tab == "✅ Validation & Modeling":
     st.subheader("Step 5: Run the Model Interactively")
 
     if st.button("🚀 Run Model"):
-        from sklearn.linear_model import LinearRegression
-        from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-        from sklearn.model_selection import train_test_split
-        from sklearn.metrics import r2_score, mean_squared_error
-        from sklearn.preprocessing import LabelEncoder
+        
 
         model_df = clean_val.copy()
         le = LabelEncoder()
