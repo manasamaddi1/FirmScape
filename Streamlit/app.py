@@ -1247,32 +1247,11 @@ if tab == "🔎 Evidence":
 # VALIDATION & MODELING TAB
 # ─────────────────────────────────────────────
 if tab == "✅ Validation & Modeling":
-    st.sidebar.divider()
-    st.sidebar.markdown("### 📖 Key Terms")
-    st.sidebar.caption("Tap any term to see a plain-English explanation.")
-    terms = {
-        "R²": "How much of the housing price movement our model explains. 0 = explains nothing, 1 = explains everything. Even 0.05 is meaningful here — housing has many drivers.",
-        "RMSE": "Average prediction error in the same units as the target (% price change). Lower = more accurate.",
-        "AUC": "How well the model ranks breakout cities vs. non-breakout cities. 0.5 = random guessing, 1.0 = perfect. Above 0.6 is genuinely useful.",
-        "F1 Score": "Balance between catching real breakout cities (recall) and not crying wolf (precision). Ranges 0–1, higher is better.",
-        "Precision": "Of the cities we flagged as breakouts, how many actually were? High precision = fewer false alarms.",
-        "Recall": "Of all the real breakout cities, how many did we catch? High recall = fewer missed opportunities.",
-        "Lag": "We shift industry data back in time to test if it predicts future housing prices — not just moves alongside them. A 4-quarter lag means we use industry data from 1 year ago to predict today's housing.",
-        "Train / Val / Test Split": "Train = the model learns from this. Val = we tune and check here. Test = the final honest score on data the model never saw. Kept in time order so we never accidentally use future data to predict the past.",
-        "HHI": "Herfindahl-Hirschman Index. Measures how dominated a city's economy is by one industry. Close to 1 = one industry runs everything (fragile). Close to 0 = many industries share the pie (resilient).",
-        "Feature Importance": "Which input variables the model leaned on most to make its predictions. Higher = more influential.",
-        "Top 25% Breakout": "We label a city a 'breakout' if its housing growth lands in the top quarter of all cities in that period.",
-    }
-
-if tab == "✅ Validation & Modeling":
     import numpy as np
     from sklearn.preprocessing import StandardScaler
     from sklearn.linear_model import Ridge, LogisticRegression
     from sklearn.ensemble import RandomForestRegressor
-    from sklearn.metrics import (
-        mean_squared_error, r2_score,
-        roc_auc_score, f1_score, precision_score, recall_score
-    )
+    from sklearn.metrics import mean_squared_error, r2_score, roc_auc_score, f1_score, precision_score, recall_score
     try:
         from xgboost import XGBRegressor
         HAS_XGB = True
@@ -1280,194 +1259,311 @@ if tab == "✅ Validation & Modeling":
         HAS_XGB = False
 
     st.title("✅ Validation & Modeling")
+
     main_col, terms_col = st.columns([3, 0.6])
+    with terms_col:
+        st.markdown("### 📖 Key Terms")
+        st.markdown("""<small>
 
-if tab == "✅ Validation & Modeling":
-    st.title("✅ Validation & Interactive Modeling")
-    st.markdown(
-        "Test how well industry variables predict housing price changes. "
-        "**A low R² is expected** — housing prices have many drivers. "
-        "Our goal is to find *which variables matter most*, not to overfit."
-    )
+**R²** — How much price movement the model explains. Even 0.05 is meaningful.
 
-    st.subheader("Step 1: Choose a Model")
-    model_choice = st.selectbox(
-        "Select a model to run:",
-        ["Linear Regression (Interpretable)", "XGBoost (Best Performance)", "Random Forest (Feature Importance)"],
-        key="model_selector"
-    )
+**RMSE** — Average prediction error. Lower = better.
 
-    st.subheader("Step 2: Choose a Hypothesis")
-    hypothesis = st.selectbox(
-        "What relationship are we testing?",
-        [
-            "Does industry growth lead housing growth?",
-            "Do concentrated cities have higher housing volatility?",
-            "Do diverse cities grow more steadily?"
-        ],
-        key="hyp_selector"
-    )
+**AUC** — Ranks breakout cities. 0.5 = random, 1.0 = perfect. Above 0.6 is useful.
 
-    st.subheader("Step 3: Lag & Significance Testing")
-    col_v1, col_v2 = st.columns([1, 2])
+**F1** — Balance between catching breakouts and false alarms.
 
-    with col_v1:
-        lag_years = st.slider("Lag Housing Data by (Years):", 0, 3, 1, key="lag_slider")
-        sig_filter = st.toggle("Show only significant results (p < 0.05)", value=True, key="sig_toggle")
+**Precision** — Of flagged cities, how many were real breakouts?
 
-    val_df = merged_companies_housing.copy()
-    val_df = val_df.sort_values(['city_x', 'year_int'])
-    val_df['lagged_housing'] = val_df.groupby('city_x')['pct_change'].shift(-lag_years)
-    clean_val = val_df.dropna(subset=['lagged_housing', 'pct_change'])
+**Recall** — Of real breakouts, how many did we catch?
 
-    if not clean_val.empty:
-        x_arr = clean_val['pct_change'].values
-        y_arr = clean_val['lagged_housing'].values
-        if x_arr.std() > 0 and y_arr.std() > 0:
-            slope, intercept, r_val, p_val, std_err = stats.linregress(x_arr, y_arr)
-        else:
-            slope, intercept, r_val, p_val, std_err = 0, 0, 0, 1, 0
-        r2 = r_val ** 2
+**Lag** — Industry data shifted back to test if it predicts future prices.
 
-        with col_v2:
-            st.write(f"**Lag Results for {lag_years} Year(s):**")
-            if sig_filter and p_val >= 0.05:
-                st.warning("No statistically significant relationship found for this lag.")
-            else:
-                m1, m2, m3 = st.columns(3)
-                m1.metric("Correlation (R)", f"{r_val:.3f}")
-                m2.metric("P-Value", f"{p_val:.4f}")
-                m3.metric("R² (Variance Explained)", f"{r2:.3f}")
-                st.write(f"Sample Size: **{len(clean_val):,} data points**")
+**Train/Val/Test** — Always in time order. No future data leaking into past.
 
-    st.divider()
-    st.subheader("Step 4: Practical Significance")
-    if not clean_val.empty and (not sig_filter or p_val < 0.05):
-        st.info(f"""
-        **The 'So What?' Factor:** A **10% increase** in company growth is associated with a 
-        **{10 * slope:.2f}%** change in housing growth **{lag_years} year(s)** later.
+**HHI** — How dominated by one industry. High = fragile.
 
-        **R² = {r2:.3f}** — Industry concentration explains roughly **{r2*100:.1f}%** of housing 
-        price variance. The remaining {(1-r2)*100:.1f}% is driven by other factors.
-        """)
+**Feature Importance** — Which variables the model leaned on most.
 
-    st.divider()
-    st.subheader("Step 5: Run the Model Interactively")
+**Overfitting** — Memorizes training data, fails on new data.
 
-    if st.button("🚀 Run Model"):
-        
+**Ridge** — Simple linear model, easy to interpret.
 
-        model_df = clean_val.copy()
-        le = LabelEncoder()
-        if 'industry' in model_df.columns:
-            model_df['industry_enc'] = le.fit_transform(model_df['industry'].fillna("Unknown"))
-        else:
-            model_df['industry_enc'] = 0
+**Random Forest** — Many trees averaged together.
 
-        div_df = (
-            merged_companies_housing.groupby(["city_x", "year_int"])["industry"]
-            .nunique()
-            .reset_index()
-            .rename(columns={"industry": "diversity"})
-        ) if 'industry' in merged_companies_housing.columns else pd.DataFrame(columns=["city_x","year_int","diversity"])
-        model_df = model_df.merge(div_df, on=["city_x", "year_int"], how="left")
-        model_df['diversity'] = model_df['diversity'].fillna(1)
+**XGBoost** — Most powerful, harder to interpret.
 
-        features = ['pct_change', 'industry_enc', 'diversity']
-        target = 'lagged_housing'
+**ROC Curve** — Bows top-left = strong model.
 
-        X = model_df[features].dropna()
-        y = model_df.loc[X.index, target]
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+</small>""", unsafe_allow_html=True)
 
-        if "XGBoost" in model_choice:
+    with main_col:
+        st.markdown("Two complementary models: **regression** to quantify *how much* housing prices move, and **classification** to flag *which cities are about to break out*. A low R² is expected and honest.")
+
+        if integrated_df is None:
+            st.error("Integrated dataset not found. This tab requires the firmscape integrated CSV.")
+            st.stop()
+
+        idf_m = integrated_df.copy()
+        city_col_m = idf_m['_city_col'].iloc[0] if '_city_col' in idf_m.columns else 'city_state'
+        idf_m['city_state'] = idf_m[city_col_m].astype(str)
+        idf_m = idf_m.sort_values(['city_state', 'year', 'quarter'])
+
+        CANDIDATE_FEATURES = ['firms_founded_yoy', 'hhi_new', 'top_industry_share_new', 'industry_count_new', 'firm_count_total', 'fhfa_qoq', 'zillow_qoq', 'zillow_yoy']
+        TARGET = 'fhfa_yoy'
+        FEATURES = [f for f in CANDIDATE_FEATURES if f in idf_m.columns and f != TARGET]
+
+        df_mod = idf_m.dropna(subset=[TARGET] + FEATURES[:2], how='any').copy()
+        df_mod[FEATURES] = df_mod[FEATURES].fillna(0)
+
+        train = df_mod[df_mod['year'] < 2018]
+        val   = df_mod[(df_mod['year'] >= 2018) & (df_mod['year'] <= 2021)]
+        test  = df_mod[df_mod['year'] >= 2022]
+
+        X_train = train[FEATURES];  y_train = train[TARGET]
+        X_val   = val[FEATURES];    y_val   = val[TARGET]
+        X_test  = test[FEATURES];   y_test  = test[TARGET]
+
+        scaler = StandardScaler()
+        X_train_s = scaler.fit_transform(X_train)
+        X_val_s   = scaler.transform(X_val)
+        X_test_s  = scaler.transform(X_test)
+
+        st.subheader("📐 Data Splits (Time-Based — No Leakage)")
+        sp1, sp2, sp3 = st.columns(3)
+        sp1.metric("Train (< 2018)", f"{len(X_train):,} rows")
+        sp2.metric("Validation (2018-21)", f"{len(X_val):,} rows")
+        sp3.metric("Test (>= 2022)", f"{len(X_test):,} rows")
+        st.caption(f"Features: {', '.join(FEATURES)} | Target: {TARGET}")
+        st.divider()
+
+        # PART A — REGRESSION
+        st.subheader("📈 Part A: Regression — How Much Will Prices Move?")
+        reg_model_choice = st.selectbox("Select regression model:", ["Ridge (Interpretable)", "Random Forest", "XGBoost"] if HAS_XGB else ["Ridge (Interpretable)", "Random Forest"], key="reg_model_choice")
+        lag_q = st.slider("Lag features by N quarters:", 0, 8, 4, key="reg_lag")
+
+        if st.button("🚀 Run Regression Model", key="run_reg"):
+            with st.spinner("Training..."):
+                df_lag = df_mod.copy()
+                for f in FEATURES:
+                    df_lag[f] = df_lag.groupby('city_state')[f].shift(lag_q)
+                df_lag = df_lag.dropna(subset=FEATURES + [TARGET])
+                train_l = df_lag[df_lag['year'] < 2018]
+                val_l   = df_lag[(df_lag['year'] >= 2018) & (df_lag['year'] <= 2021)]
+                test_l  = df_lag[df_lag['year'] >= 2022]
+                Xl_tr = train_l[FEATURES];  yl_tr = train_l[TARGET]
+                Xl_va = val_l[FEATURES];    yl_va = val_l[TARGET]
+                Xl_te = test_l[FEATURES];   yl_te = test_l[TARGET]
+                sc_l = StandardScaler()
+                Xl_tr_s = sc_l.fit_transform(Xl_tr)
+                Xl_va_s = sc_l.transform(Xl_va)
+                Xl_te_s = sc_l.transform(Xl_te)
+                if "Ridge" in reg_model_choice:
+                    model_reg = Ridge(alpha=1.0)
+                    model_reg.fit(Xl_tr_s, yl_tr)
+                    val_pred  = model_reg.predict(Xl_va_s)
+                    test_pred = model_reg.predict(Xl_te_s)
+                    feat_imp = pd.Series(model_reg.coef_, index=FEATURES).sort_values(key=lambda x: x.abs(), ascending=True)
+                    feat_imp_label = "Coefficient"
+                elif "Random Forest" in reg_model_choice:
+                    model_reg = RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42, n_jobs=-1)
+                    model_reg.fit(Xl_tr, yl_tr)
+                    val_pred  = model_reg.predict(Xl_va)
+                    test_pred = model_reg.predict(Xl_te)
+                    feat_imp = pd.Series(model_reg.feature_importances_, index=FEATURES).sort_values(ascending=True)
+                    feat_imp_label = "Importance"
+                else:
+                    model_reg = XGBRegressor(n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42, verbosity=0)
+                    model_reg.fit(Xl_tr, yl_tr, eval_set=[(Xl_va, yl_va)], verbose=False)
+                    val_pred  = model_reg.predict(Xl_va)
+                    test_pred = model_reg.predict(Xl_te)
+                    feat_imp = pd.Series(model_reg.feature_importances_, index=FEATURES).sort_values(ascending=True)
+                    feat_imp_label = "Importance"
+                val_rmse  = np.sqrt(mean_squared_error(yl_va, val_pred))
+                val_r2    = r2_score(yl_va, val_pred)
+                test_rmse = np.sqrt(mean_squared_error(yl_te, test_pred))
+                test_r2   = r2_score(yl_te, test_pred)
+
+            st.success(f"✅ {reg_model_choice} trained with {lag_q}Q lag")
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Val R²", f"{val_r2:.4f}")
+            c2.metric("Val RMSE", f"{val_rmse:.4f}")
+            c3.metric("Test R²", f"{test_r2:.4f}")
+            c4.metric("Test RMSE", f"{test_rmse:.4f}")
+            st.markdown(f'<div style="background:#1a2a1a; border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:8px 0;">💡 <strong>Takeaway:</strong> Industry variables explain roughly <b>{val_r2*100:.1f}%</b> of housing price variance at a {lag_q}-quarter lag. {"Meaningful lead signal." if val_r2 > 0.05 else "Weak signal — try adjusting the lag slider."}</div>', unsafe_allow_html=True)
+
+            st.markdown(f"#### {feat_imp_label}s — Which Variables Drive the Prediction?")
+            fig_fi, ax_fi = plt.subplots(figsize=(8, max(3, len(FEATURES) * 0.5)))
+            fig_fi.patch.set_facecolor("#0e1117"); ax_fi.set_facecolor("#0e1117")
+            colors_fi = ['#f74f4f' if v < 0 else '#4f8ef7' for v in feat_imp.values]
+            ax_fi.barh(feat_imp.index, feat_imp.values, color=colors_fi)
+            ax_fi.axvline(0, color='#666', linewidth=0.8)
+            ax_fi.set_xlabel(feat_imp_label, color='white'); ax_fi.tick_params(colors='white'); ax_fi.spines[:].set_color('#333')
+            ax_fi.set_title(f"Feature {feat_imp_label}s — {reg_model_choice}", color='white')
+            fig_fi.tight_layout(); st.pyplot(fig_fi); plt.close(fig_fi)
+
+            st.markdown("#### Actual vs. Predicted (Validation Set)")
+            fig_av, ax_av = plt.subplots(figsize=(6, 4))
+            fig_av.patch.set_facecolor("#0e1117"); ax_av.set_facecolor("#0e1117")
+            ax_av.scatter(yl_va.values, val_pred, alpha=0.4, s=15, color='#4f8ef7', linewidths=0)
+            lims = [min(yl_va.min(), val_pred.min()), max(yl_va.max(), val_pred.max())]
+            ax_av.plot(lims, lims, color='#f7a44f', linewidth=1.5, linestyle='--', label='Perfect prediction')
+            ax_av.set_xlabel("Actual FHFA YoY %", color='white'); ax_av.set_ylabel("Predicted", color='white')
+            ax_av.set_title(f"Actual vs. Predicted — Val R²={val_r2:.3f}", color='white')
+            ax_av.tick_params(colors='white'); ax_av.spines[:].set_color('#333')
+            ax_av.legend(facecolor='#1e1e2e', labelcolor='white', fontsize=8)
+            fig_av.tight_layout(); st.pyplot(fig_av); plt.close(fig_av)
+
+        st.divider()
+
+        # PART B — MODEL COMPARISON
+        st.subheader("🏆 Part B: Model Comparison — Ridge vs RF vs XGBoost")
+        if st.button("⚡ Compare All Models", key="run_compare"):
+            with st.spinner("Training all models..."):
+                results_cmp = {}
+                m_r = Ridge(alpha=1.0)
+                m_r.fit(X_train_s, y_train)
+                results_cmp["Ridge"] = {"Val R²": round(r2_score(y_val, m_r.predict(X_val_s)), 4), "Val RMSE": round(np.sqrt(mean_squared_error(y_val, m_r.predict(X_val_s))), 4), "Test R²": round(r2_score(y_test, m_r.predict(X_test_s)), 4)}
+                m_rf = RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42, n_jobs=-1)
+                m_rf.fit(X_train, y_train)
+                results_cmp["Random Forest"] = {"Val R²": round(r2_score(y_val, m_rf.predict(X_val)), 4), "Val RMSE": round(np.sqrt(mean_squared_error(y_val, m_rf.predict(X_val))), 4), "Test R²": round(r2_score(y_test, m_rf.predict(X_test)), 4)}
+                if HAS_XGB:
+                    m_xgb = XGBRegressor(n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42, verbosity=0)
+                    m_xgb.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
+                    results_cmp["XGBoost"] = {"Val R²": round(r2_score(y_val, m_xgb.predict(X_val)), 4), "Val RMSE": round(np.sqrt(mean_squared_error(y_val, m_xgb.predict(X_val))), 4), "Test R²": round(r2_score(y_test, m_xgb.predict(X_test)), 4)}
+            cmp_df = pd.DataFrame(results_cmp).T.reset_index().rename(columns={"index": "Model"}).sort_values("Val R²", ascending=False)
+            st.dataframe(cmp_df, use_container_width=True, hide_index=True)
+            best_model = cmp_df.iloc[0]["Model"]; best_r2 = cmp_df.iloc[0]["Val R²"]
+            fig_cmp = px.bar(cmp_df, x="Model", y="Val R²", color="Val R²", color_continuous_scale="Blues", template="plotly_dark", title="Model Comparison — Validation R²", text_auto=".4f")
+            fig_cmp.update_layout(height=350)
+            st.plotly_chart(fig_cmp, use_container_width=True)
+            st.markdown(f'<div style="background:#1a2a1a; border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:8px 0;">🏆 <strong>Best model:</strong> <b>{best_model}</b> — Val R² = <b>{best_r2}</b>.</div>', unsafe_allow_html=True)
+
+        st.divider()
+
+        # PART C — CLASSIFICATION
+        st.subheader("🎯 Part C: Classification — Will This City Break Out?")
+        st.markdown("Frames the problem as binary: **top 25% future growth = 1**, rest = 0. AUC > 0.6 means we can meaningfully rank cities by breakout probability.")
+        clf_horizon = st.radio("Prediction horizon:", ["Short-term (1-year forward YoY)", "Long-term (10-year forward from FHFA index)"], horizontal=True, key="clf_horizon")
+
+        if st.button("🎯 Run Classification Model", key="run_clf"):
+            with st.spinner("Training classifier..."):
+                if "Short-term" in clf_horizon:
+                    p75 = float(y_train.quantile(0.75))
+                    y_train_cls = (y_train >= p75).astype(int)
+                    y_val_cls   = (y_val   >= p75).astype(int)
+                    y_test_cls  = (y_test  >= p75).astype(int)
+                    clf_m = LogisticRegression(max_iter=1000, random_state=42)
+                    clf_m.fit(X_train_s, y_train_cls)
+                    y_val_pred_cls  = clf_m.predict(X_val_s)
+                    y_val_proba     = clf_m.predict_proba(X_val_s)[:, 1]
+                    y_test_pred_cls = clf_m.predict(X_test_s)
+                    y_test_proba    = clf_m.predict_proba(X_test_s)[:, 1]
+                    horizon_label   = "1-year forward"
+                    clf_features    = FEATURES
+                else:
+                    if 'fhfa_index' not in idf_m.columns:
+                        st.error("fhfa_index column not found — cannot build 10-year target.")
+                        st.stop()
+                    df10 = idf_m.copy().sort_values(['city_state', 'year', 'quarter'])
+                    df10['fhfa_index_fwd40q'] = df10.groupby('city_state')['fhfa_index'].shift(-40)
+                    df10['growth_10y'] = (df10['fhfa_index_fwd40q'] / df10['fhfa_index']) - 1
+                    df10 = df10[df10['year'] >= 2010].dropna(subset=['growth_10y'])
+                    clf_features = [f for f in FEATURES if f in df10.columns]
+                    train10 = df10[df10['year'] < 2013]
+                    val10   = df10[(df10['year'] >= 2013) & (df10['year'] <= 2015)]
+                    test10  = df10[df10['year'] >= 2016]
+                    X_tr10 = train10[clf_features].fillna(0); y_tr10 = train10['growth_10y']
+                    X_va10 = val10[clf_features].fillna(0);   y_va10 = val10['growth_10y']
+                    X_te10 = test10[clf_features].fillna(0);  y_te10 = test10['growth_10y']
+                    sc10 = StandardScaler()
+                    X_tr10_s = sc10.fit_transform(X_tr10)
+                    X_va10_s = sc10.transform(X_va10)
+                    X_te10_s = sc10.transform(X_te10)
+                    p75_10 = float(y_tr10.quantile(0.75))
+                    y_train_cls = (y_tr10 >= p75_10).astype(int)
+                    y_val_cls   = (y_va10 >= p75_10).astype(int)
+                    y_test_cls  = (y_te10 >= p75_10).astype(int)
+                    clf_m = LogisticRegression(max_iter=1000, random_state=42)
+                    clf_m.fit(X_tr10_s, y_train_cls)
+                    y_val_pred_cls  = clf_m.predict(X_va10_s)
+                    y_val_proba     = clf_m.predict_proba(X_va10_s)[:, 1]
+                    y_test_pred_cls = clf_m.predict(X_te10_s)
+                    y_test_proba    = clf_m.predict_proba(X_te10_s)[:, 1]
+                    horizon_label   = "10-year forward"
+
+            auc_val  = roc_auc_score(y_val_cls, y_val_proba)
+            f1_val   = f1_score(y_val_cls, y_val_pred_cls, zero_division=0)
+            prec_val = precision_score(y_val_cls, y_val_pred_cls, zero_division=0)
+            rec_val  = recall_score(y_val_cls, y_val_pred_cls, zero_division=0)
             try:
-                model = xgb.XGBRegressor(n_estimators=100, max_depth=4, random_state=42, verbosity=0)
-                model_label = "XGBoost"
+                auc_test = roc_auc_score(y_test_cls, y_test_proba)
+                f1_test  = f1_score(y_test_cls, y_test_pred_cls, zero_division=0)
             except Exception:
-                model = GradientBoostingRegressor(n_estimators=100, max_depth=4, random_state=42)
-                model_label = "Gradient Boosting (XGBoost fallback)"
-        elif "Random Forest" in model_choice:
-            model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
-            model_label = "Random Forest"
-        else:
-            model = LinearRegression()
-            model_label = "Linear Regression"
+                auc_test, f1_test = None, None
 
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-        r2 = r2_score(y_test, y_pred)
-        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+            st.success(f"✅ Logistic Regression trained — {horizon_label} breakout classifier")
+            col_c1, col_c2, col_c3, col_c4 = st.columns(4)
+            col_c1.metric("Val AUC", f"{auc_val:.4f}")
+            col_c2.metric("Val F1", f"{f1_val:.4f}")
+            col_c3.metric("Val Precision", f"{prec_val:.4f}")
+            col_c4.metric("Val Recall", f"{rec_val:.4f}")
+            if auc_test is not None:
+                st.caption(f"Test AUC: **{auc_test:.4f}** · Test F1: **{f1_test:.4f}**")
+            auc_label = "strong signal" if auc_val > 0.65 else ("moderate signal" if auc_val > 0.55 else "weak signal")
+            st.markdown(f'<div style="background:#1a2a1a; border-left:4px solid #f7a44f; border-radius:6px; padding:10px 14px; margin:8px 0;">💡 <strong>Takeaway:</strong> AUC = <b>{auc_val:.3f}</b> — a <b>{auc_label}</b> for ranking cities by {horizon_label} breakout probability.</div>', unsafe_allow_html=True)
 
-        st.success(f"**{model_label} Results:**")
-        rc1, rc2 = st.columns(2)
-        rc1.metric("R² Score", f"{r2:.4f}")
-        rc2.metric("RMSE", f"{rmse:.4f}")
-        st.caption(f"💡 R² = {r2:.3f} means industry variables explain ~{r2*100:.1f}% of housing price variance.")
+            from sklearn.metrics import roc_curve
+            fpr, tpr, _ = roc_curve(y_val_cls, y_val_proba)
+            fig_roc, ax_roc = plt.subplots(figsize=(6, 4))
+            fig_roc.patch.set_facecolor("#0e1117"); ax_roc.set_facecolor("#0e1117")
+            ax_roc.plot(fpr, tpr, color='#4f8ef7', linewidth=2, label=f'ROC (AUC = {auc_val:.3f})')
+            ax_roc.plot([0, 1], [0, 1], color='#666', linestyle='--', linewidth=1, label='Random baseline')
+            ax_roc.set_xlabel("False Positive Rate", color='white'); ax_roc.set_ylabel("True Positive Rate", color='white')
+            ax_roc.set_title(f"ROC Curve — {horizon_label}", color='white')
+            ax_roc.tick_params(colors='white'); ax_roc.spines[:].set_color('#333')
+            ax_roc.legend(facecolor='#1e1e2e', labelcolor='white', fontsize=9)
+            fig_roc.tight_layout(); st.pyplot(fig_roc); plt.close(fig_roc)
 
-        if hasattr(model, 'feature_importances_'):
-            fi = pd.DataFrame({
-                "Feature": ["Company Growth %", "Industry Type", "Industry Diversity"],
-                "Importance": model.feature_importances_
-            }).sort_values("Importance", ascending=True)
-            fig_fi = px.bar(fi, x="Importance", y="Feature", orientation="h",
-                color="Importance", color_continuous_scale="Blues",
-                template="plotly_dark",
-                title="Feature Importance — Which Variables Drive Housing Price Changes?")
-            st.plotly_chart(fig_fi, use_container_width=True)
-        elif model_label == "Linear Regression":
-            coef_df = pd.DataFrame({
-                "Feature": ["Company Growth %", "Industry Type", "Industry Diversity"],
-                "Coefficient": model.coef_
-            }).sort_values("Coefficient", key=abs, ascending=True)
-            fig_coef = px.bar(coef_df, x="Coefficient", y="Feature", orientation="h",
-                color="Coefficient", color_continuous_scale="RdBu",
-                template="plotly_dark", title="Linear Regression Coefficients")
-            st.plotly_chart(fig_coef, use_container_width=True)
+            st.markdown("#### Which Features Drive Breakout Probability?")
+            clf_coef = pd.Series(clf_m.coef_[0], index=clf_features).sort_values(key=lambda x: x.abs(), ascending=True)
+            fig_clf_c, ax_clf_c = plt.subplots(figsize=(8, max(3, len(clf_features) * 0.5)))
+            fig_clf_c.patch.set_facecolor("#0e1117"); ax_clf_c.set_facecolor("#0e1117")
+            colors_c = ['#f74f4f' if v < 0 else '#4f8ef7' for v in clf_coef.values]
+            ax_clf_c.barh(clf_coef.index, clf_coef.values, color=colors_c)
+            ax_clf_c.axvline(0, color='#666', linewidth=0.8)
+            ax_clf_c.set_xlabel("Log-odds coefficient", color='white'); ax_clf_c.set_title("Logistic Regression Coefficients", color='white')
+            ax_clf_c.tick_params(colors='white'); ax_clf_c.spines[:].set_color('#333')
+            fig_clf_c.tight_layout(); st.pyplot(fig_clf_c); plt.close(fig_clf_c)
 
-    st.divider()
-    st.subheader("Step 6: Compare Curated Cities")
-    st.caption("Comparing the top data-rich cities matching each iconic case study.")
+        st.divider()
 
-    selected_cities = st.multiselect(
-        "Select cities to compare (max 5):",
-        CURATED_CITIES,
-        default=CURATED_CITIES[:3]
-    )
+        # PART D — CITY COMPARISON
+        st.subheader("🏙️ Part D: City-Level Predictability")
+        if st.button("📊 Run City Comparison", key="run_city_cmp"):
+            from scipy.stats import pearsonr as _pearsonr
+            city_rows = []
+            for city in CURATED_CITIES[:5]:
+                cd = df_mod[df_mod['city_state'] == city]
+                if len(cd) < 10:
+                    city_rows.append({"City": city, "N": len(cd), "R": "n/a", "R²": "n/a", "P-value": "n/a", "Signal": " Too few rows"})
+                    continue
+                x_c = cd[FEATURES[0]].values; y_c = cd[TARGET].values
+                if x_c.std() == 0 or y_c.std() == 0:
+                    city_rows.append({"City": city, "N": len(cd), "R": "n/a", "R²": "n/a", "P-value": "n/a", "Signal": " No variance"})
+                    continue
+                r_c, p_c = _pearsonr(x_c, y_c)
+                city_rows.append({"City": city, "N": len(cd), "R": round(r_c, 3), "R²": round(r_c**2, 3), "P-value": round(p_c, 4), "Signal": "✅ Significant" if p_c < 0.05 else "❌ Not significant"})
+            if city_rows:
+                st.dataframe(pd.DataFrame(city_rows), use_container_width=True, hide_index=True)
+                valid_rows = [r for r in city_rows if isinstance(r["R²"], float)]
+                if valid_rows:
+                    best_city = max(valid_rows, key=lambda x: x["R²"])
+                    worst_city = min(valid_rows, key=lambda x: x["R²"])
+                    st.markdown(f'<div style="background:#1a2a1a; border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:8px 0;">💡 <b>{best_city["City"]}</b> is most predictable (R²={best_city["R²"]}). <b>{worst_city["City"]}</b> is hardest to predict (R²={worst_city["R²"]}).</div>', unsafe_allow_html=True)
 
-    if selected_cities:
-        city_results = []
-        for city in selected_cities[:5]:
-            city_key = city.split(",")[0]
-            data_c = clean_val[clean_val['city_x'].str.contains(city_key, case=False, na=False)]
-            if len(data_c) >= 3:
-                try:
-                    x_vals = data_c['pct_change'].values
-                    y_vals = data_c['lagged_housing'].values
-                    if x_vals.std() == 0 or y_vals.std() == 0:
-                        raise ValueError("Constant array")
-                    r_c, p_c = pearsonr(x_vals, y_vals)
-                    city_results.append({
-                        "City": city,
-                        "Lag Correlation (R)": round(r_c, 3),
-                        "R²": round(r_c ** 2, 3),
-                        "P-Value": round(p_c, 4),
-                        "Data Points": len(data_c),
-                        "Significant": "✅" if p_c < 0.05 else "❌"
-                    })
-                except Exception:
-                    city_results.append({
-                        "City": city, "Lag Correlation (R)": "n/a",
-                        "R²": "n/a", "P-Value": "n/a",
-                        "Data Points": len(data_c), "Significant": "⚠️ No variance"
-                    })
-            else:
-                city_results.append({
-                    "City": city, "Lag Correlation (R)": "n/a",
-                    "R²": "n/a", "P-Value": "n/a", "Data Points": len(data_c), "Significant": "⚠️ Too few"
-                })
-        if city_results:
-            st.dataframe(pd.DataFrame(city_results), use_container_width=True)
+        st.divider()
+        st.caption(" All findings are associative, not causal. Industry structure is one signal among many. FirmScape is a leading indicator tool, not a complete forecast.")
 
 # ─────────────────────────────────────────────
 # OPPORTUNITY LAB (Model-based)
