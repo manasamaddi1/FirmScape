@@ -11,7 +11,7 @@
 !data/previews/
 !data/previews/*.csv
 # macOS system files
-.DS_Store
+*.DS_Store
 
 # Python
 __pycache__/
@@ -21,7 +21,7 @@ __pycache__/
 .ipynb_checkpoints/
 
 # VS Code
-.vscode/
+*.vscode/
 
 # OS
-Thumbs.db
+*.Thumbs.db
