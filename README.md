@@ -172,8 +172,6 @@ FirmScape/
 │   ├── Zillow_data_cleaning.ipynb
 │   ├── Anusha's_partial_eda.ipynb
 │   └── aaronWongEDA.ipynb
-│
-└── (optional) app.py                           # Root copy of Streamlit app, if present
 ```
 
 ---
