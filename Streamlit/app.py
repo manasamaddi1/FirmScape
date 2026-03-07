@@ -476,7 +476,7 @@ if tab == "🧩 Build the Dataset":
         "data/hpi_at_metro.csv", "data/hpi_at_metro.csv",
         "data/Zillow_Housing_Dataset.csv", "data/Zillow_Housing_Dataset.csv",
         "data/firmscape_integrated_quarterly_cleaned.csv",
-        "Final Panel"
+        "data/merged_companies_housing.csv"
     ],
     "Stage": [
         "Raw", "Cleaned",
@@ -516,6 +516,19 @@ if tab == "🧩 Build the Dataset":
     ]
 })
     st.dataframe(pipeline_data, height=500, width=900)
+
+    st.subheader("Preview: First 50 rows of each integrated dataset")
+    preview_height = 450  # Same height for both tables so they align side by side
+    prev_a, prev_b = st.columns(2)
+    with prev_a:
+        st.markdown("**data/firmscape_integrated_*_cleaned.csv** (quarterly CBSA panel)")
+        if integrated_df is not None:
+            st.dataframe(integrated_df.head(50), use_container_width=True, height=preview_height)
+        else:
+            st.caption("Integrated panel not loaded.")
+    with prev_b:
+        st.markdown("**data/merged_companies_housing.csv**")
+        st.dataframe(merged_companies_housing.head(50), use_container_width=True, height=preview_height)
 
 # ─────────────────────────────────────────────
 # EDA EXPLORER TAB
