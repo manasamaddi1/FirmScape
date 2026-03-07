@@ -152,6 +152,17 @@ firmscape/
 ---
 
 ### Requirements
+├── streamlit                           
+├── pandas                
+├── numpy 
+├── matplotlib            
+├── seaborn                      
+├── plotly
+├── scipy    
+├── xgboost 
+└── scikit-learn
+
+
 streamlit
 pandas
 numpy
