@@ -10,3 +10,18 @@
 # Preview samples (first 100–500 rows of full CSVs; safe to commit)
 !data/previews/
 !data/previews/*.csv
+# macOS system files
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+
+# OS
+Thumbs.db
