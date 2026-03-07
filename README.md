@@ -119,8 +119,6 @@ DATASETS: https://drive.google.com/drive/folders/10s8DfNQ36rqgW9ilG2tfTD06trYGhb
 
 ## Results
 
-**Streamlit dashboard:** [FirmScape App](#)
-
 ### **Key Findings**
 - **Firm founding rate** is the strongest single predictor of near-term housing price movement
 - **Industry diversity** buffers volatility — cities with more industry types show steadier price growth
