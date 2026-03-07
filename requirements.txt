@@ -1,0 +1,27 @@
+# FirmScape — every import used in notebooks + Streamlit app
+# (stdlib: os, pathlib, warnings, subprocess, glob — no install needed)
+
+# Dashboard
+streamlit>=1.28.0
+
+# Data & numerics
+pandas>=1.5.0
+numpy>=1.21.0
+openpyxl>=3.0.0
+
+# Plotting
+matplotlib>=3.5.0
+seaborn>=0.12.0
+plotly>=5.0.0
+
+# Science & stats
+scipy>=1.9.0
+statsmodels>=0.13.0
+
+# ML (notebooks + app: Ridge, RF, XGB, LogisticRegression, StandardScaler, etc.)
+scikit-learn>=1.2.0
+xgboost>=1.7.0
+
+# Jupyter/IPython (notebooks: IPython.display, %pip, kernel)
+jupyter>=1.0.0
+ipython>=8.0.0
