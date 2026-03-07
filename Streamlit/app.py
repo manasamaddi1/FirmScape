@@ -300,11 +300,26 @@ if 'preset_housing_metric' not in st.session_state:
 if tab == "🏠 Home":
     st.title("FirmScape")
 
+    # Takeaway-style boxes: no dark background, black text for readability
+    st.markdown("""
+    <style>
+    .firmscape-home-box {
+        overflow: visible !important;
+        line-height: 1.65;
+        padding: 14px 20px;
+        color: #1a1a1a;
+        font-size: 1rem;
+    }
+    .firmscape-home-box strong { color: #000000; }
+    .firmscape-home-box h3 { color: #1a1a1a !important; margin: 0; }
+    </style>
+    """, unsafe_allow_html=True)
+
     # Research question — always shown
     st.markdown("""
-    <div style="background:#1a1f2e; border-left:4px solid #4f8ef7; border-radius:8px; padding:14px 20px; margin-bottom:16px;">
-        <p style="color:#aab4c8; font-size:1.05em; margin:0;">
-            <strong style="color:white;">Research Question:</strong>
+    <div class="firmscape-home-box" style="border-left:4px solid #4f8ef7; border-radius:8px; margin-bottom:16px;">
+        <p style="margin:0;">
+            <strong>Research Question:</strong>
             <em> When industries cluster and grow in a city, how do housing prices move — now and later?</em>
         </p>
     </div>
@@ -376,11 +391,11 @@ if tab == "🏠 Home":
     city_full = preset.get("city_full", CURATED_CITIES[0])
 
     st.markdown(f"""
-    <div style="background: #1a1f2e; border-left: 4px solid #4f8ef7; border-radius: 8px; padding: 20px; margin: 12px 0;">
-        <h3 style="margin:0; color:white;">{preset["emoji"]} {selected_cs}</h3>
-        <p style="color: #aab4c8; margin: 10px 0 4px 0; font-size:0.85em;">📍 Dataset city: <strong style="color:#4f8ef7">{city_full}</strong></p>
-        <p style="color: #aab4c8; margin: 6px 0 6px 0;">{preset["story"]}</p>
-        <p style="color: #f7a44f; font-size: 0.88em; margin:0;">
+    <div class="firmscape-home-box" style="border-left: 4px solid #4f8ef7; border-radius: 8px; margin: 12px 0;">
+        <h3>{preset["emoji"]} {selected_cs}</h3>
+        <p style="margin: 10px 0 4px 0; font-size:0.9em;">📍 Dataset city: <strong style="color:#2563eb">{city_full}</strong></p>
+        <p style="margin: 6px 0 6px 0;">{preset["story"]}</p>
+        <p style="font-size: 0.9em; margin:0;">
             📌 <strong>What to look for:</strong> {preset["what_to_look_for"]}
         </p>
     </div>
@@ -512,6 +527,20 @@ if tab == "📊 EDA Explorer":
         "Expand the details sections for deeper context."
     )
 
+    # Takeaway boxes: no dark background, black text for readability
+    st.markdown("""
+    <style>
+    .firmscape-eda-takeaway {
+        overflow: visible !important;
+        line-height: 1.65;
+        padding: 14px 18px;
+        color: #1a1a1a;
+        font-size: 1rem;
+    }
+    .firmscape-eda-takeaway strong { color: #000000; }
+    </style>
+    """, unsafe_allow_html=True)
+
     sel_col1, sel_col2 = st.columns(2)
     with sel_col1:
         selected_var = st.selectbox("🔍 Select a variable:", [
@@ -618,19 +647,8 @@ if tab == "📊 EDA Explorer":
 
                 st.markdown(
                     f"""
-                        <div style="
-                        background:#1f2f1f;
-                        border-left:4px solid #4f8ef7;
-                        border-radius:8px;
-                        padding:12px 16px;
-                        margin:8px 0;
-                        color:#e8eefc;
-                        line-height:1.5;
-                    ">
-                    <span style="font-weight:600; color:#ffffff;">💡 Takeaway:</span>
-                    <span style="color:#e8eefc;">
-                    {takeaway_text.replace('<b>', '<b style="color:#ffffff;">')}
-                    </span>
+                    <div class="firmscape-eda-takeaway" style="border-left:4px solid #4f8ef7; border-radius:8px; margin:8px 0;">
+                    <span style="font-weight:600;">💡 Takeaway:</span> {takeaway_text.replace('<b>', '<b>')}
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -708,7 +726,7 @@ if tab == "📊 EDA Explorer":
                         f"{'📈 Strongest signal at a lag — firm growth leads housing here.' if best_lag and abs(best_r) > abs(r_now) else '⚠️ Weak lead signal for this city.'}"
                     )
                     st.markdown(
-                        f'<div style="background:#1a2a1a; border-left:4px solid #f7a44f; border-radius:6px; padding:10px 14px; margin:8px 0;">'
+                        f'<div class="firmscape-eda-takeaway" style="border-left:4px solid #f7a44f; border-radius:6px; margin:8px 0;">'
                         f'💡 <strong>Takeaway:</strong> {takeaway_firm}</div>',
                         unsafe_allow_html=True
                     )
@@ -762,7 +780,7 @@ if tab == "📊 EDA Explorer":
                     st.dataframe(pd.DataFrame(stat_rows), use_container_width=True, hide_index=True)
                     most_conc = max(stat_rows, key=lambda x: float(x["Avg HHI"]))
                     st.markdown(
-                        f'<div style="background:#1a2a1a; border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:8px 0;">'
+                        f'<div class="firmscape-eda-takeaway" style="border-left:4px solid #4f8ef7; border-radius:6px; margin:8px 0;">'
                         f'💡 <strong>Takeaway:</strong> <b>{most_conc["City"]}</b> has the highest average concentration.</div>',
                         unsafe_allow_html=True
                     )
@@ -811,7 +829,7 @@ if tab == "📊 EDA Explorer":
                     st.dataframe(pd.DataFrame(stat_rows2), use_container_width=True, hide_index=True)
                     most_div = max(stat_rows2, key=lambda x: float(x["Avg # Industries"]))
                     st.markdown(
-                        f'<div style="background:#1a2a1a; border-left:4px solid #4ff7a4; border-radius:6px; padding:10px 14px; margin:8px 0;">'
+                        f'<div class="firmscape-eda-takeaway" style="border-left:4px solid #4ff7a4; border-radius:6px; margin:8px 0;">'
                         f'💡 <strong>Takeaway:</strong> <b>{most_div["City"]}</b> has the most diverse industry mix.</div>',
                         unsafe_allow_html=True
                     )
@@ -860,7 +878,7 @@ if tab == "📊 EDA Explorer":
                     st.dataframe(pd.DataFrame(stat_rows3), use_container_width=True, hide_index=True)
                     highest = max(stat_rows3, key=lambda x: float(x["Avg Top Share"].rstrip('%')))
                     st.markdown(
-                        f'<div style="background:#1a2a1a; border-left:4px solid #f7a44f; border-radius:6px; padding:10px 14px; margin:8px 0;">'
+                        f'<div class="firmscape-eda-takeaway" style="border-left:4px solid #f7a44f; border-radius:6px; margin:8px 0;">'
                         f'💡 <strong>Takeaway:</strong> <b>{highest["City"]}</b> has the most dominant single industry.</div>',
                         unsafe_allow_html=True
                     )
@@ -889,6 +907,22 @@ if tab == "📊 EDA Explorer":
 if tab == "🔎 Evidence":
     st.title("What Patterns Show Up Across Cities?")
     st.markdown("Explore the relationship between industrial clustering and urban housing value.")
+
+    # Takeaway boxes: no dark background, black text for readability
+    st.markdown("""
+    <style>
+    .firmscape-evidence-takeaway {
+        overflow: visible !important;
+        min-height: 2.5em;
+        line-height: 1.65;
+        padding: 14px 18px;
+        color: #1a1a1a;
+        font-size: 1rem;
+        display: block;
+    }
+    .firmscape-evidence-takeaway strong { color: #000000; }
+    </style>
+    """, unsafe_allow_html=True)
 
     if integrated_df is None:
         import glob
@@ -1014,7 +1048,7 @@ if tab == "🔎 Evidence":
                     f"Since the first recorded period, home prices have <b>{direction} {abs(total_chg):.0f}%</b> overall."
                 )
             st.markdown(
-                f'<div style="background:#1a2a1a; border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:4px 0 12px 0;">'
+                f'<div class="firmscape-evidence-takeaway" style="border-left:4px solid #4f8ef7; border-radius:6px; margin:4px 0 12px 0;">'
                 f'💡 <strong>Takeaway:</strong> {takeaway_ts}</div>',
                 unsafe_allow_html=True
             )
@@ -1103,7 +1137,7 @@ if tab == "🔎 Evidence":
                 f"(R={r_sc:.2f}) — {sig_phrase}."
             )
             st.markdown(
-                f'<div style="background:#1a2a1a; border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:8px 0;">'
+                f'<div class="firmscape-evidence-takeaway" style="border-left:4px solid #4f8ef7; border-radius:6px; margin:8px 0;">'
                 f'💡 <strong>Takeaway:</strong> {takeaway_sc}</div>',
                 unsafe_allow_html=True
             )
