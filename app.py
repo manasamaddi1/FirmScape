@@ -1204,6 +1204,41 @@ if tab == "🔎 Evidence":
 # VALIDATION & MODELING TAB
 # ─────────────────────────────────────────────
 if tab == "✅ Validation & Modeling":
+    st.sidebar.divider()
+    st.sidebar.markdown("### 📖 Key Terms")
+    st.sidebar.caption("Tap any term to see a plain-English explanation.")
+    terms = {
+        "R²": "How much of the housing price movement our model explains. 0 = explains nothing, 1 = explains everything. Even 0.05 is meaningful here — housing has many drivers.",
+        "RMSE": "Average prediction error in the same units as the target (% price change). Lower = more accurate.",
+        "AUC": "How well the model ranks breakout cities vs. non-breakout cities. 0.5 = random guessing, 1.0 = perfect. Above 0.6 is genuinely useful.",
+        "F1 Score": "Balance between catching real breakout cities (recall) and not crying wolf (precision). Ranges 0–1, higher is better.",
+        "Precision": "Of the cities we flagged as breakouts, how many actually were? High precision = fewer false alarms.",
+        "Recall": "Of all the real breakout cities, how many did we catch? High recall = fewer missed opportunities.",
+        "Lag": "We shift industry data back in time to test if it predicts future housing prices — not just moves alongside them. A 4-quarter lag means we use industry data from 1 year ago to predict today's housing.",
+        "Train / Val / Test Split": "Train = the model learns from this. Val = we tune and check here. Test = the final honest score on data the model never saw. Kept in time order so we never accidentally use future data to predict the past.",
+        "HHI": "Herfindahl-Hirschman Index. Measures how dominated a city's economy is by one industry. Close to 1 = one industry runs everything (fragile). Close to 0 = many industries share the pie (resilient).",
+        "Feature Importance": "Which input variables the model leaned on most to make its predictions. Higher = more influential.",
+        "Top 25% Breakout": "We label a city a 'breakout' if its housing growth lands in the top quarter of all cities in that",}
+    
+if tab == "✅ Validation & Modeling":
+    import numpy as np
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.linear_model import Ridge, LogisticRegression
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.metrics import (
+        mean_squared_error, r2_score,
+        roc_auc_score, f1_score, precision_score, recall_score
+    )
+    try:
+        from xgboost import XGBRegressor
+        HAS_XGB = True
+    except ImportError:
+        HAS_XGB = False
+
+    st.title("✅ Validation & Modeling")
+    main_col, terms_col = st.columns([3, 0.6])
+    
+if tab == "✅ Validation & Modeling":
     st.title("✅ Validation & Interactive Modeling")
     st.markdown(
         "Test how well industry variables predict housing price changes. "
