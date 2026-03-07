@@ -1390,7 +1390,13 @@ if tab == "✅ Validation & Modeling":
             c2.metric("Val RMSE", f"{val_rmse:.4f}")
             c3.metric("Test R²", f"{test_r2:.4f}")
             c4.metric("Test RMSE", f"{test_rmse:.4f}")
-            st.markdown(f'<div style="background:#1a2a1a; border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:8px 0;">💡 <strong>Takeaway:</strong> Industry variables explain roughly <b>{val_r2*100:.1f}%</b> of housing price variance at a {lag_q}-quarter lag. {"Meaningful lead signal." if val_r2 > 0.05 else "Weak signal — try adjusting the lag slider."}</div>', unsafe_allow_html=True)
+            if val_r2 > 0.05:
+                takeaway_msg = f"Industry variables explain roughly <b>{val_r2*100:.1f}%</b> of housing price variance at a {lag_q}-quarter lag. Meaningful lead signal."
+            elif val_r2 > 0:
+                takeaway_msg = f"Industry variables explain roughly <b>{val_r2*100:.1f}%</b> of housing price variance at a {lag_q}-quarter lag. Weak signal — try adjusting the lag slider."
+            else:
+                takeaway_msg = f"R² = {val_r2:.3f} — the model is <b>worse than predicting the mean</b> at this lag (negative R²). Try a different lag, fewer features, or a longer training window."
+            st.markdown(f'<div style="border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:8px 0; color:#1a1a1a;">💡 <strong>Takeaway:</strong> {takeaway_msg}</div>', unsafe_allow_html=True)
 
             st.markdown(f"#### {feat_imp_label}s — Which Variables Drive the Prediction?")
             fig_fi, ax_fi = plt.subplots(figsize=(8, max(3, len(FEATURES) * 0.5)))
@@ -1437,7 +1443,7 @@ if tab == "✅ Validation & Modeling":
             fig_cmp = px.bar(cmp_df, x="Model", y="Val R²", color="Val R²", color_continuous_scale="Blues", template="plotly_dark", title="Model Comparison — Validation R²", text_auto=".4f")
             fig_cmp.update_layout(height=350)
             st.plotly_chart(fig_cmp, use_container_width=True)
-            st.markdown(f'<div style="background:#1a2a1a; border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:8px 0;">🏆 <strong>Best model:</strong> <b>{best_model}</b> — Val R² = <b>{best_r2}</b>.</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:8px 0; color:#1a1a1a;">🏆 <strong>Best model:</strong> <b>{best_model}</b> — Val R² = <b>{best_r2}</b>.</div>', unsafe_allow_html=True)
 
         st.divider()
 
@@ -1511,7 +1517,7 @@ if tab == "✅ Validation & Modeling":
             if auc_test is not None:
                 st.caption(f"Test AUC: **{auc_test:.4f}** · Test F1: **{f1_test:.4f}**")
             auc_label = "strong signal" if auc_val > 0.65 else ("moderate signal" if auc_val > 0.55 else "weak signal")
-            st.markdown(f'<div style="background:#1a2a1a; border-left:4px solid #f7a44f; border-radius:6px; padding:10px 14px; margin:8px 0;">💡 <strong>Takeaway:</strong> AUC = <b>{auc_val:.3f}</b> — a <b>{auc_label}</b> for ranking cities by {horizon_label} breakout probability.</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="border-left:4px solid #f7a44f; border-radius:6px; padding:10px 14px; margin:8px 0; color:#1a1a1a;">💡 <strong>Takeaway:</strong> AUC = <b>{auc_val:.3f}</b> — a <b>{auc_label}</b> for ranking cities by {horizon_label} breakout probability.</div>', unsafe_allow_html=True)
 
             from sklearn.metrics import roc_curve
             fpr, tpr, _ = roc_curve(y_val_cls, y_val_proba)
@@ -1560,7 +1566,7 @@ if tab == "✅ Validation & Modeling":
                 if valid_rows:
                     best_city = max(valid_rows, key=lambda x: x["R²"])
                     worst_city = min(valid_rows, key=lambda x: x["R²"])
-                    st.markdown(f'<div style="background:#1a2a1a; border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:8px 0;">💡 <b>{best_city["City"]}</b> is most predictable (R²={best_city["R²"]}). <b>{worst_city["City"]}</b> is hardest to predict (R²={worst_city["R²"]}).</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:8px 0; color:#1a1a1a;">💡 <b>{best_city["City"]}</b> is most predictable (R²={best_city["R²"]}). <b>{worst_city["City"]}</b> is hardest to predict (R²={worst_city["R²"]}).</div>', unsafe_allow_html=True)
 
         st.divider()
         st.caption(" All findings are associative, not causal. Industry structure is one signal among many. FirmScape is a leading indicator tool, not a complete forecast.")
