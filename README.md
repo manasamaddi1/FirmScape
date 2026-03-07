@@ -30,20 +30,20 @@ Using machine learning and 50 years of business registration and housing data, w
 pip install streamlit pandas numpy matplotlib seaborn plotly scipy scikit-learn xgboost
 ```
 
-**Step 2 — Make sure these two files are in the same folder as `app.py`**
+**Step 2 — Put the two main datasets in the `data/` folder**
 ```
-firmscape_integrated_quarterly_cleaned.csv
-merged_companies_housing.csv
+data/firmscape_integrated_quarterly_cleaned.csv
+data/merged_companies_housing.csv
 ```
 
-**Step 3 — Launch the app**
+**Step 3 — Launch the app (from the repo root)**
 ```bash
-streamlit run app.py
+streamlit run Streamlit/app.py
 ```
 
 Your browser will open automatically at `http://localhost:8501`
 
-> 💡 If you see a warning that the integrated dataset is missing, make sure `firmscape_integrated_quarterly_cleaned.csv` is in the same folder as `app.py` — not inside a subfolder.
+> 💡 The app looks for CSVs in the `data/` directory. If the integrated dataset is missing, add `firmscape_integrated_quarterly_cleaned.csv` (or `firmscape_integrated_cbsa_quarterly_cleaned.csv`) to `data/`.
 
 ---
 
@@ -138,15 +138,42 @@ DATASETS: https://drive.google.com/drive/folders/10s8DfNQ36rqgW9ilG2tfTD06trYGhb
 ## 📁 File Structure
 
 ```
-firmscape/
-├── app.py                                      # Streamlit dashboard
-├── firmscape_deliverable.ipynb                 # Main notebook: cleaning, merging, modeling
-├── firmscape_integrated_quarterly_cleaned.csv  # ⭐ Primary dataset (275K rows)
-├── merged_companies_housing.csv                # Baseline merged panel
-├── aaronWongEDA.ipynb                          # EDA notebook
-├── Anusha's_partial_eda.ipynb                  # EDA notebook
-├── notebooks/                                  # Additional data prep
-└── README.md
+FirmScape/
+├── README.md
+├── .gitignore
+├── requirements.txt
+│
+├── Streamlit/
+│   └── app.py                                  # Streamlit dashboard (run: streamlit run Streamlit/app.py)
+│
+├── data/                                       # All CSVs (gitignored except the two below)
+│   ├── firmscape_integrated_quarterly_cleaned.csv   # ⭐ Primary panel (tracked)
+│   ├── merged_companies_housing.csv                 # Baseline merged panel (tracked)
+│   ├── companies_sorted.csv
+│   ├── companies-2023-q4-sm.csv
+│   ├── companies_us_100plus_clean.csv
+│   ├── hpi_at_metro.csv
+│   ├── cleaned_zillow_data.csv
+│   ├── cleaned_housing_data.csv
+│   ├── Zillow_Housing_Dataset.csv
+│   ├── kaggle_companies_cleaned.csv
+│   ├── us_companies_100plus.csv
+│   └── previews/                               # First 100–500 rows of each CSV (tracked)
+│       ├── README.md
+│       └── *_preview.csv
+│
+├── combined_notebook/
+│   └── firmscape_deliverable.ipynb             # Full pipeline: cleaning, merge, modeling
+│
+├── individual_notebooks/
+│   ├── build_and_clean_integrated_panel.ipynb  # Build integrated CBSA-quarterly panel
+│   ├── next_hub_scoring.ipynb                  # Next Hub composite scoring
+│   ├── correlation_timeseries.ipynb           # Correlation & time series
+│   ├── Zillow_data_cleaning.ipynb
+│   ├── Anusha's_partial_eda.ipynb
+│   └── aaronWongEDA.ipynb
+│
+└── (optional) app.py                           # Root copy of Streamlit app, if present
 ```
 
 ---
