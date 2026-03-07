@@ -18,12 +18,17 @@ from sklearn.preprocessing import LabelEncoder
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
+# Project root and data directory (all CSVs live in data/)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
 # ─────────────────────────────────────────────
 # DATA LOADING
 # ─────────────────────────────────────────────
 @st.cache_data
 def load_data():
-    df = pd.read_csv("merged_companies_housing.csv")
+    path = DATA_DIR / "merged_companies_housing.csv"
+    df = pd.read_csv(path)
     year_series = pd.to_datetime(df['date'], errors='coerce').dt.year
     if year_series.isna().mean() > 0.5:
         year_series = df['date'].astype(str).str.extract(r'(\b\d{4}\b)')[0].astype(float)
@@ -40,18 +45,22 @@ def load_data():
 def load_integrated_data():
     possible_names = [
         "firmscape_integrated_cbsa_quarterly_cleaned.csv",
+        "firmscape_integrated_quarterly_cleaned.csv",
         "firmscape_integrated_cbsa.csv",
         "firmscape_integrated_cbsa_quarterly.csv",
         "firmscape_active_businesses.csv",
         "firmscape_active_businesse.csv",
     ]
     import glob
-    found = glob.glob("firmscape_integrated*.csv") + glob.glob("firmscape_active*.csv")
-    all_names = possible_names + [f for f in found if f not in possible_names]
+    found = glob.glob(str(DATA_DIR / "firmscape_integrated*.csv")) + glob.glob(str(DATA_DIR / "firmscape_active*.csv"))
+    all_paths = [DATA_DIR / n for n in possible_names] + [Path(f) for f in found if Path(f).name not in possible_names]
 
-    for fname in all_names:
+    for path in all_paths:
+        if not path.exists():
+            continue
         try:
-            df = pd.read_csv(fname)
+            df = pd.read_csv(path)
+            fname = str(path)
             for city_candidate in ['city_state', 'city', 'metro_name', 'cbsa_name']:
                 if city_candidate in df.columns:
                     df[city_candidate] = df[city_candidate].fillna("Unknown").astype(str)
@@ -79,7 +88,7 @@ def load_integrated_data():
 try:
     merged_companies_housing = load_data()
 except FileNotFoundError:
-    st.error("File 'merged_companies_housing.csv' not found.")
+    st.error(f"File not found: {DATA_DIR / 'merged_companies_housing.csv'}")
     st.stop()
 
 integrated_df, integrated_fname = load_integrated_data()
@@ -447,11 +456,11 @@ if tab == "🧩 Build the Dataset":
 
     pipeline_data = pd.DataFrame({
     "Dataset": [
-        "companies_sorted.csv", "companies_sorted.csv",
-        "companies-2023-q4-sm.csv", "companies-2023-q4-sm.csv",
-        "hpi_at_metro.csv", "hpi_at_metro.csv",
-        "Zillow_Housing_Dataset.csv", "Zillow_Housing_Dataset.csv",
-        "firmscape_integrated_quarterly_cleaned.csv",
+        "data/companies_sorted.csv", "data/companies_sorted.csv",
+        "data/companies-2023-q4-sm.csv", "data/companies-2023-q4-sm.csv",
+        "data/hpi_at_metro.csv", "data/hpi_at_metro.csv",
+        "data/Zillow_Housing_Dataset.csv", "data/Zillow_Housing_Dataset.csv",
+        "data/firmscape_integrated_quarterly_cleaned.csv",
         "Final Panel"
     ],
     "Stage": [
@@ -883,7 +892,7 @@ if tab == "🔎 Evidence":
 
     if integrated_df is None:
         import glob
-        found_files = glob.glob("*.csv")
+        found_files = glob.glob(str(DATA_DIR / "*.csv"))
         st.error("⚠️ Could not find the integrated dataset.")
         st.code("\n".join(sorted(found_files)) if found_files else "No CSV files found.")
         st.stop()
@@ -1218,8 +1227,9 @@ if tab == "✅ Validation & Modeling":
         "Train / Val / Test Split": "Train = the model learns from this. Val = we tune and check here. Test = the final honest score on data the model never saw. Kept in time order so we never accidentally use future data to predict the past.",
         "HHI": "Herfindahl-Hirschman Index. Measures how dominated a city's economy is by one industry. Close to 1 = one industry runs everything (fragile). Close to 0 = many industries share the pie (resilient).",
         "Feature Importance": "Which input variables the model leaned on most to make its predictions. Higher = more influential.",
-        "Top 25% Breakout": "We label a city a 'breakout' if its housing growth lands in the top quarter of all cities in that",}
-    
+        "Top 25% Breakout": "We label a city a 'breakout' if its housing growth lands in the top quarter of all cities in that period.",
+    }
+
 if tab == "✅ Validation & Modeling":
     import numpy as np
     from sklearn.preprocessing import StandardScaler
@@ -1237,7 +1247,7 @@ if tab == "✅ Validation & Modeling":
 
     st.title("✅ Validation & Modeling")
     main_col, terms_col = st.columns([3, 0.6])
-    
+
 if tab == "✅ Validation & Modeling":
     st.title("✅ Validation & Interactive Modeling")
     st.markdown(
@@ -1443,9 +1453,11 @@ This tool turns our **modeling predictors** into an **interactive screening & ra
     # ----------------------------
     # Load modeling panel
     # ----------------------------
-    panel_path = Path("firmscape_integrated_quarterly_cleaned.csv")
+    panel_path = DATA_DIR / "firmscape_integrated_quarterly_cleaned.csv"
     if not panel_path.exists():
-        st.error("Missing `firmscape_integrated_quarterly_cleaned.csv` in app directory.")
+        panel_path = DATA_DIR / "firmscape_integrated_cbsa_quarterly_cleaned.csv"
+    if not panel_path.exists():
+        st.error("Missing integrated panel CSV in data/ (firmscape_integrated_quarterly_cleaned.csv or firmscape_integrated_cbsa_quarterly_cleaned.csv).")
         st.stop()
 
     df = pd.read_csv(panel_path)

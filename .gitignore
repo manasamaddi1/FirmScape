@@ -1,0 +1,12 @@
+# Ignore all CSV files
+*.csv
+
+# Except these (keep tracked)
+!firmscape_integrated_quarterly_cleaned.csv
+!merged_companies_housing.csv
+!data/firmscape_integrated_quarterly_cleaned.csv
+!data/merged_companies_housing.csv
+
+# Preview samples (first 100–500 rows of full CSVs; safe to commit)
+!data/previews/
+!data/previews/*.csv

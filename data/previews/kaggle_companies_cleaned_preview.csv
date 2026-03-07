@@ -1,0 +1,501 @@
+name,year founded,industry,size range,locality,country,current employee estimate
+ibm,1911.0,information technology and services,10001+,"new york, new york, united states",united states,274047
+us army,1800.0,military,10001+,"alexandria, virginia, united states",united states,162163
+hewlett-packard,1939.0,information technology and services,10001+,"palo alto, california, united states",united states,127952
+cognizant technology solutions,1994.0,information technology and services,10001+,"teaneck, new jersey, united states",united states,122031
+walmart,1962.0,retail,10001+,"withee, wisconsin, united states",united states,120753
+microsoft,1975.0,computer software,10001+,"redmond, washington, united states",united states,116196
+at&t,1876.0,telecommunications,10001+,"dallas, texas, united states",united states,115188
+united states air force,1947.0,defense & space,10001+,"randolph, texas, united states",united states,113997
+pwc,1998.0,accounting,10001+,"new york, new york, united states",united states,111372
+wells fargo,,financial services,10001+,"san francisco, california, united states",united states,109532
+deloitte,1900.0,management consulting,10001+,"new york, new york, united states",united states,104112
+citi,1812.0,financial services,10001+,"new york, new york, united states",united states,101482
+bank of america,1968.0,banking,10001+,"charlotte, north carolina, united states",united states,97357
+jpmorgan chase & co.,1823.0,financial services,10001+,"new york, new york, united states",united states,95234
+us navy,,military,10001+,"washington, district of columbia, united states",united states,94458
+amazon,1994.0,internet,10001+,"seattle, washington, united states",united states,93247
+apple,1976.0,consumer electronics,10001+,"cupertino, california, united states",united states,90095
+oracle,1977.0,information technology and services,10001+,"redwood shores, california, united states",united states,85090
+google,1998.0,internet,10001+,"mountain view, california, united states",united states,75109
+united states postal service,,government administration,10001+,"washington, district of columbia, united states",united states,74357
+mcdonald's corporation,1955.0,restaurants,10001+,"oak brook, illinois, united states",united states,68233
+boeing,1916.0,aviation & aerospace,10001+,"chicago, illinois, united states",united states,67261
+kaiser permanente,1945.0,hospital & health care,10001+,"oakland, california, united states",united states,65839
+ford motor company,1903.0,automotive,10001+,"dearborn, michigan, united states",united states,65335
+intel corporation,1968.0,semiconductors,10001+,"santa clara, california, united states",united states,64046
+department of veterans affairs,1930.0,government administration,10001+,"washington, district of columbia, united states",united states,62685
+cisco,1984.0,computer networking,10001+,"san jose, california, united states",united states,61803
+general motors,,automotive,10001+,"detroit, michigan, united states",united states,61638
+pepsico,1965.0,food & beverages,10001+,"purchase, new york, united states",united states,61040
+target,1962.0,retail,10001+,"minneapolis, minnesota, united states",united states,60602
+ups,1907.0,transportation/trucking/railroad,10001+,"atlanta, georgia, united states",united states,59712
+pfizer,1848.0,pharmaceuticals,10001+,"new york, new york, united states",united states,59588
+unitedhealth group,1980.0,hospital & health care,10001+,"minneapolis, minnesota, united states",united states,57720
+dell,1984.0,information technology and services,10001+,"round rock, texas, united states",united states,55945
+honeywell,1985.0,electrical/electronic manufacturing,10001+,"morristown, new jersey, united states",united states,51721
+schlumberger,1926.0,oil & energy,10001+,"houston, texas, united states",united states,50715
+lockheed martin,1912.0,defense & space,10001+,"bethesda, maryland, united states",united states,50303
+starbucks,1971.0,retail,10001+,"seattle, washington, united states",united states,46523
+morgan stanley,1935.0,financial services,10001+,"new york, new york, united states",united states,44799
+the home depot,1977.0,retail,10001+,"atlanta, georgia, united states",united states,44630
+johnson & johnson,1887.0,hospital & health care,10001+,"new brunswick, new jersey, united states",united states,43985
+schneider electric,1836.0,electrical/electronic manufacturing,10001+,"erlanger, kentucky, united states",united states,43240
+state farm,1922.0,insurance,10001+,"bloomington, illinois, united states",united states,43096
+ge,1892.0,electrical/electronic manufacturing,10001+,"fairfield, connecticut, united states",united states,42043
+procter & gamble,1837.0,consumer goods,10001+,"cincinnati, ohio, united states",united states,40562
+walgreens,1901.0,retail,10001+,"deerfield, illinois, united states",united states,40455
+"keller williams realty, inc.",1983.0,real estate,10001+,"austin, texas, united states",united states,40325
+"lowe's companies, inc.",1946.0,retail,10001+,"mooresville, north carolina, united states",united states,39741
+united states marine corps,,military,10001+,"washington, district of columbia, united states",united states,38917
+dell emc,1979.0,information technology and services,10001+,"hopkinton, massachusetts, united states",united states,38703
+verizon wireless,2000.0,telecommunications,10001+,"basking ridge, new jersey, united states",united states,38627
+j.p. morgan,,financial services,10001+,"new york, new york, united states",united states,37431
+verizon,1983.0,information technology and services,10001+,"basking ridge, new jersey, united states",united states,37368
+kpmg,1987.0,accounting,10001+,"montvale, new jersey, united states",united states,36853
+linkedin,2003.0,internet,10001+,"mountain view, california, united states",united states,36309
+facebook,2004.0,internet,10001+,"menlo park, california, united states",united states,36149
+northrop grumman corporation,1939.0,defense & space,10001+,"falls church, virginia, united states",united states,35965
+adp,1949.0,human resources,10001+,"roseland, new jersey, united states",united states,35686
+medtronic,1949.0,medical devices,10001+,"minneapolis, minnesota, united states",united states,35664
+abbott,1980.0,hospital & health care,10001+,"illinois city, illinois, united states",united states,35603
+chevron,1879.0,oil & energy,10001+,"san ramon, california, united states",united states,34995
+american express,1850.0,financial services,10001+,"new york, new york, united states",united states,34816
+samsung electronics,1938.0,electrical/electronic manufacturing,10001+,"none, south carolina, united states",united states,34021
+macy's,1858.0,retail,10001+,"cincinnati, ohio, united states",united states,33795
+thomson reuters,2008.0,information technology and services,10001+,"new york, new york, united states",united states,33745
+avon,1886.0,cosmetics,10001+,"new york, new york, united states",united states,33670
+cvs health,1963.0,pharmaceuticals,10001+,"woonsocket, rhode island, united states",united states,33408
+halliburton,1919.0,oil & energy,10001+,"houston, texas, united states",united states,33250
+csc,1959.0,information technology and services,10001+,"falls church, virginia, united states",united states,32601
+merck,1891.0,pharmaceuticals,10001+,"kenilworth, new jersey, united states",united states,32210
+kpmg,,financial services,10001+,"new york, new york, united states",united states,32208
+dxc technology,2017.0,information technology and services,10001+,,united states,31671
+johnson controls,1885.0,mechanical or industrial engineering,10001+,"milwaukee, wisconsin, united states",united states,31630
+allstate,1931.0,insurance,10001+,"northbrook, illinois, united states",united states,31490
+marriott international,1927.0,hospitality,10001+,"bethesda, maryland, united states",united states,31146
+3m health care,1902.0,mechanical or industrial engineering,10001+,"saint paul, minnesota, united states",united states,30937
+xerox,1906.0,information technology and services,10001+,"norwalk, connecticut, united states",united states,30765
+cbre,,real estate,10001+,"los angeles, california, united states",united states,30665
+nyc department of education,,education management,10001+,"new york, new york, united states",united states,30526
+goldman sachs,1869.0,investment banking,10001+,"new york, new york, united states",united states,30470
+fidelity investments,1946.0,financial services,10001+,"boston, massachusetts, united states",united states,30346
+exxonmobil,1999.0,oil & energy,10001+,"irving, texas, united states",united states,30131
+t-mobile,2002.0,telecommunications,10001+,"bellevue, washington, united states",united states,30100
+nike,1972.0,sporting goods,10001+,"beaverton, oregon, united states",united states,29731
+best buy,1966.0,retail,10001+,"richfield, minnesota, united states",united states,29568
+american airlines,1930.0,airlines/aviation,10001+,"fort worth, texas, united states",united states,29498
+baker hughes,,oil & energy,10001+,"houston, texas, united states",united states,29481
+the coca-cola company,1892.0,food & beverages,10001+,"atlanta, georgia, united states",united states,29278
+genpact,1997.0,information technology and services,10001+,"new york, new york, united states",united states,29262
+jll,,commercial real estate,10001+,"chicago, illinois, united states",united states,29101
+u.s. bank,,banking,10001+,"minneapolis, minnesota, united states",united states,28763
+pnc,2014.0,financial services,10001+,"pittsburgh, pennsylvania, united states",united states,28132
+sprint,1899.0,telecommunications,10001+,"overland park, kansas, united states",united states,28008
+airbus,2014.0,aviation & aerospace,10001+,"arlington, virginia, united states",united states,27548
+capital one,1994.0,financial services,10001+,"mclean, virginia, united states",united states,27522
+delta air lines,1928.0,airlines/aviation,10001+,"atlanta, georgia, united states",united states,27331
+merrill lynch,1914.0,financial services,10001+,"new york, new york, united states",united states,27206
+mondelēz international,1903.0,food production,10001+,"deerfield, illinois, united states",united states,27152
+farmers insurance,1928.0,insurance,10001+,"los angeles, california, united states",united states,26029
+aecom,1990.0,civil engineering,10001+,"los angeles, california, united states",united states,26008
+united states department of defense,1947.0,military,10001+,"washington, district of columbia, united states",united states,26000
+metlife,1868.0,insurance,10001+,"new york, new york, united states",united states,25967
+total,1924.0,oil & energy,10001+,"san diego, california, united states",united states,25780
+cargill,1865.0,food production,10001+,"wayzata, minnesota, united states",united states,25321
+united airlines,1926.0,airlines/aviation,10001+,"chicago, illinois, united states",united states,24967
+mary kay inc.,1963.0,cosmetics,10001+,"addison, texas, united states",united states,24699
+liberty mutual insurance,1912.0,insurance,10001+,"boston, massachusetts, united states",united states,24623
+comcast,1963.0,media production,10001+,"philadelphia, pennsylvania, united states",united states,24515
+caterpillar inc.,1925.0,machinery,10001+,"peoria heights, illinois, united states",united states,24304
+jacobs,1947.0,construction,10001+,"pasadena, california, united states",united states,24241
+bny mellon,,financial services,10001+,"new york, new york, united states",united states,24183
+raytheon,1922.0,defense & space,10001+,"waltham, massachusetts, united states",united states,23733
+eli lilly and company,1876.0,pharmaceuticals,10001+,"indianapolis, indiana, united states",united states,23297
+hp,,information technology and services,10001+,"palo alto, california, united states",united states,23294
+uber,2009.0,internet,10001+,"san francisco, california, united states",united states,22415
+kroger,1883.0,retail,10001+,"cincinnati, ohio, united states",united states,22257
+thermo fisher scientific,1956.0,research,10001+,"waltham, massachusetts, united states",united states,22025
+aig,1919.0,insurance,10001+,"new york, new york, united states",united states,21673
+novo nordisk,1923.0,pharmaceuticals,10001+,"plainsboro, new jersey, united states",united states,21638
+h&r block,1955.0,retail,10001+,"kansas city, missouri, united states",united states,21410
+social security administration,1935.0,government administration,10001+,"baltimore, maryland, united states",united states,21150
+costco wholesale,1983.0,retail,10001+,"issaquah, washington, united states",united states,21030
+thales,2015.0,defense & space,10001+,"alexandria, virginia, united states",united states,20983
+convergys,1998.0,outsourcing/offshoring,10001+,"cincinnati, ohio, united states",united states,20979
+iqvia,2016.0,hospital & health care,10001+,"danbury, connecticut, united states",united states,20957
+salesforce,1999.0,internet,10001+,"san francisco, california, united states",united states,20885
+the dow chemical company,1897.0,chemicals,10001+,"midland, michigan, united states",united states,20706
+hilton worldwide,1919.0,hospitality,10001+,"mclean, virginia, united states",united states,20578
+los angeles unified school district,1853.0,education management,10001+,"los angeles, california, united states",united states,20404
+army national guard,,military,10001+,"arlington, virginia, united states",united states,20390
+nordstrom,1901.0,retail,10001+,"seattle, washington, united states",united states,20376
+lifespan,1994.0,hospital & health care,10001+,"providence, rhode island, united states",united states,20341
+fedex,1973.0,package/freight delivery,10001+,"memphis, tennessee, united states",united states,20317
+edward jones,1922.0,financial services,10001+,"st. louis, missouri, united states",united states,20238
+travelers,1853.0,insurance,10001+,"new york, new york, united states",united states,20065
+state street,,financial services,10001+,"boston, massachusetts, united states",united states,19917
+the walt disney company,1923.0,entertainment,10001+,"burbank, california, united states",united states,19839
+nielsen,,information services,10001+,"new york, new york, united states",united states,19719
+herbalife,1980.0,"health, wellness and fitness",10001+,"los angeles, california, united states",united states,19473
+northwestern mutual,1857.0,financial services,10001+,"milwaukee, wisconsin, united states",united states,19406
+eaton,1911.0,electrical/electronic manufacturing,10001+,"cleveland, ohio, united states",united states,19358
+aflac,1955.0,insurance,10001+,"columbus, georgia, united states",united states,19357
+united nations,1945.0,international affairs,10001+,"new york, new york, united states",united states,19263
+mayo clinic,,hospital & health care,10001+,"rochester, minnesota, united states",united states,18846
+booz allen hamilton,1914.0,management consulting,10001+,"mclean, virginia, united states",united states,18838
+qualcomm,1985.0,wireless,10001+,"san diego, california, united states",united states,18614
+john deere,1837.0,machinery,10001+,"moline, illinois, united states",united states,18546
+aetna,1853.0,insurance,10001+,"hartford, connecticut, united states",united states,18519
+enterprise rent-a-car,1957.0,automotive,10001+,"hillsborough, new hampshire, united states",united states,18509
+bristol-myers squibb,1887.0,pharmaceuticals,10001+,"new york, new york, united states",united states,18504
+us department of homeland security,2003.0,government administration,10001+,"washington, district of columbia, united states",united states,18497
+new york life insurance company,1845.0,financial services,10001+,"new york, new york, united states",united states,18438
+weatherford,1987.0,oil & energy,10001+,"houston, texas, united states",united states,18246
+fluor corporation,1912.0,construction,10001+,"irving, texas, united states",united states,18228
+hca,1968.0,hospital & health care,10001+,"nashville, tennessee, united states",united states,18069
+dupont,1802.0,chemicals,10001+,"wilmington, delaware, united states",united states,17997
+sears holdings corporation,2005.0,retail,10001+,"hoffman estates, illinois, united states",united states,17952
+cleveland clinic,1921.0,hospital & health care,10001+,"cleveland, ohio, united states",united states,17891
+kohl's department stores,1962.0,retail,10001+,"menomonee falls, wisconsin, united states",united states,17851
+humana,1961.0,insurance,10001+,"louisville, kentucky, united states",united states,17829
+primerica,1977.0,financial services,10001+,"duluth, georgia, united states",united states,17751
+coldwell banker residential brokerage,1906.0,real estate,10001+,"madison, new jersey, united states",united states,17682
+faa,1958.0,aviation & aerospace,10001+,"washington, district of columbia, united states",united states,17533
+university of michigan,1817.0,higher education,10001+,"ann arbor, michigan, united states",united states,17439
+fis,,information technology and services,10001+,"jacksonville, florida, united states",united states,17305
+ge power,,oil & energy,10001+,"schenectady, new york, united states",united states,17184
+epam systems,1993.0,computer software,10001+,"newtown, pennsylvania, united states",united states,17180
+jcpenney,1902.0,retail,10001+,"plano, texas, united states",united states,16930
+boston scientific,1979.0,medical devices,10001+,"marlborough, massachusetts, united states",united states,16903
+lenovo,2005.0,computer hardware,10001+,"morrisville, north carolina, united states",united states,16797
+amazon web services,2006.0,information technology and services,10001+,"seattle, washington, united states",united states,16751
+philip morris international,2008.0,tobacco,10001+,"new york, new york, united states",united states,16683
+alstom,1928.0,railroad manufacture,10001+,"washington, pennsylvania, united states",united states,16661
+cummins inc.,1919.0,automotive,10001+,"columbus, indiana, united states",united states,16625
+centurylink,1930.0,telecommunications,10001+,"monroe, louisiana, united states",united states,16598
+amgen,1980.0,biotechnology,10001+,"thousand oaks, california, united states",united states,16533
+cvs pharmacy,1963.0,pharmaceuticals,10001+,"woonsocket, rhode island, united states",united states,16445
+ncr corporation,1884.0,information technology and services,10001+,"duluth, georgia, united states",united states,16404
+amdocs,1982.0,telecommunications,10001+,"chesterfield, missouri, united states",united states,16108
+abbvie,2013.0,pharmaceuticals,10001+,"north chicago, illinois, united states",united states,16096
+arcelormittal,2006.0,mining & metals,10001+,"none, south carolina, united states",united states,16090
+aramark,1939.0,retail,10001+,"philadelphia, pennsylvania, united states",united states,15833
+samsung,1969.0,consumer electronics,10001+,"new york, new york, united states",united states,15818
+cerner corporation,1979.0,information technology and services,10001+,"kansas city, missouri, united states",united states,15781
+kimberly-clark,1872.0,consumer goods,10001+,"seminole, texas, united states",united states,15758
+agilent technologies,1999.0,biotechnology,10001+,"santa clara, california, united states",united states,15704
+upwork,2015.0,internet,10001+,"mountain view, california, united states",united states,15693
+whole foods market,1980.0,supermarkets,10001+,"austin, texas, united states",united states,15674
+comcast cable,1963.0,telecommunications,10001+,"philadelphia, pennsylvania, united states",united states,15667
+southwest airlines,1971.0,airlines/aviation,10001+,"dallas, texas, united states",united states,15614
+stryker,1941.0,medical devices,10001+,"kalamazoo, michigan, united states",united states,15560
+international mission of mercy (imm),1991.0,public relations and communications,10001+,"morristown, new jersey, united states",united states,15560
+bank of america merrill lynch,,financial services,10001+,"charlotte, north carolina, united states",united states,15449
+publix super markets,1930.0,retail,10001+,"lakeland, florida, united states",united states,15397
+youtube,2005.0,internet,10001+,"san bruno, california, united states",united states,15319
+u.s. department of state,,international affairs,10001+,"washington, district of columbia, united states",united states,15219
+mars,1911.0,food production,10001+,"mclean, virginia, united states",united states,15197
+usaa,1922.0,financial services,10001+,"san antonio, texas, united states",united states,15109
+chicago public schools,1837.0,education management,10001+,"chicago, illinois, united states",united states,15079
+fresenius medical care,1996.0,hospital & health care,10001+,"waltham, massachusetts, united states",united states,14994
+cushman & wakefield,1917.0,commercial real estate,10001+,"chicago, illinois, united states",united states,14982
+cigna,1982.0,"health, wellness and fitness",10001+,"bloomfield, connecticut, united states",united states,14932
+ymca,1844.0,non-profit organization management,10001+,"chicago, illinois, united states",united states,14924
+prudential financial,1875.0,financial services,10001+,"newark, new jersey, united states",united states,14889
+bosch,1886.0,mechanical or industrial engineering,10001+,"garfield, new jersey, united states",united states,14807
+rodan + fields,2002.0,consumer goods,10001+,"san francisco, california, united states",united states,14799
+rr donnelley,1864.0,printing,10001+,"chicago, illinois, united states",united states,14761
+vmware,1998.0,computer software,10001+,"palo alto, california, united states",united states,14733
+penn state university,1855.0,higher education,10001+,"university park, pennsylvania, united states",united states,14681
+texas instruments,1930.0,semiconductors,10001+,"dallas, texas, united states",united states,14643
+baxter international inc.,1931.0,medical devices,10001+,"deerfield, illinois, united states",united states,14603
+cardinal health,1971.0,hospital & health care,10001+,"dublin, ohio, united states",united states,14534
+amway,1959.0,consumer goods,10001+,"ada, michigan, united states",united states,14503
+bb&t,1872.0,financial services,10001+,"winston salem, north carolina, united states",united states,14394
+saic,2013.0,information technology and services,10001+,"mclean, virginia, united states",united states,14389
+bureau veritas,1828.0,environmental services,10001+,"sunrise, florida, united states",united states,14375
+sas,1976.0,computer software,10001+,"cary, north carolina, united states",united states,14362
+coldwell banker,1906.0,real estate,10001+,"madison, new jersey, united states",united states,14342
+monsanto company,2000.0,farming,10001+,"st. louis, missouri, united states",united states,14319
+manpowergroup,1948.0,staffing and recruiting,10001+,"milwaukee, wisconsin, united states",united states,14319
+american red cross,1881.0,non-profit organization management,10001+,"washington, district of columbia, united states",united states,14294
+kelly services,1946.0,staffing and recruiting,10001+,"troy, michigan, united states",united states,14262
+time warner cable,1989.0,telecommunications,10001+,"new york, new york, united states",united states,14223
+adobe,1982.0,computer software,10001+,"san jose, california, united states",united states,14176
+university of florida,1853.0,higher education,10001+,"gainesville, florida, united states",united states,14171
+ecolab,,chemicals,10001+,"st paul, kentucky, united states",united states,14106
+university of minnesota,1851.0,higher education,10001+,"st paul, kentucky, united states",united states,14092
+"ameriprise financial services, inc.",1894.0,financial services,10001+,"de pere, wisconsin, united states",united states,13954
+progressive insurance,1937.0,insurance,10001+,"bay village, ohio, united states",united states,13840
+the ohio state university,1870.0,higher education,10001+,"columbus, ohio, united states",united states,13817
+"anthem, inc.",,insurance,10001+,"indianapolis, indiana, united states",united states,13715
+safeway,1915.0,food & beverages,10001+,"pleasanton, california, united states",united states,13700
+national oilwell varco,1841.0,oil & energy,10001+,"seminole, texas, united states",united states,13484
+walt disney world,1971.0,entertainment,10001+,"lake buena vista, florida, united states",united states,13420
+staples,1986.0,business supplies and equipment,10001+,"framingham, massachusetts, united states",united states,13400
+the salvation army,1865.0,non-profit organization management,10001+,"nassau, new york, united states",united states,13374
+barclays investment bank,,financial services,10001+,"new york, new york, united states",united states,13330
+sherwin williams,1866.0,chemicals,10001+,"cleveland, ohio, united states",united states,13284
+motorola,1928.0,consumer electronics,10001+,"chicago, illinois, united states",united states,13241
+stanford university,,higher education,10001+,"stanford, california, united states",united states,13219
+mercer,,human resources,10001+,"new york, new york, united states",united states,13195
+genentech,1976.0,biotechnology,10001+,"south san francisco, california, united states",united states,13103
+bd,1897.0,medical devices,10001+,"franklin lakes, new jersey, united states",united states,12994
+duke energy corporation,1904.0,utilities,10001+,"charlotte, north carolina, united states",united states,12818
+teksystems,1983.0,information technology and services,10001+,"hanover, maryland, united states",united states,12751
+century 21®,1971.0,real estate,10001+,"madison, new jersey, united states",united states,12678
+colgate palmolive,1806.0,consumer goods,10001+,"new york, new york, united states",united states,12647
+ge aviation,,airlines/aviation,10001+,"cincinnati, ohio, united states",united states,12642
+tesla,2003.0,automotive,10001+,"palo alto, california, united states",united states,12641
+u.s. coast guard,1915.0,military,10001+,"washington, district of columbia, united states",united states,12574
+the janssen pharmaceutical companies of johnson & johnson,,pharmaceuticals,10001+,"raritan, new jersey, united states",united states,12572
+charter communications,1993.0,telecommunications,10001+,"stamford, connecticut, united states",united states,12535
+re/max,1973.0,real estate,10001+,"denver, colorado, united states",united states,12526
+jabil,1966.0,electrical/electronic manufacturing,10001+,"st. petersburg, florida, united states",united states,12518
+us government,,government administration,10001+,"washington, district of columbia, united states",united states,12482
+pizza hut,1958.0,restaurants,10001+,"plano, texas, united states",united states,12338
+emerson automation solutions,,mechanical or industrial engineering,10001+,"round rock, texas, united states",united states,12302
+the boston consulting group (bcg),1963.0,management consulting,10001+,"boston, massachusetts, united states",united states,12290
+l-3 communications,1997.0,management consulting,10001+,"new york, new york, united states",united states,12268
+davita,1999.0,hospital & health care,10001+,"denver, colorado, united states",united states,12264
+lear corporation,1917.0,automotive,10001+,"southfield, michigan, united states",united states,12219
+rockwell automation,1903.0,industrial automation,10001+,"milwaukee, wisconsin, united states",united states,12217
+wells fargo advisors,,financial services,10001+,"st. louis, missouri, united states",united states,12123
+texas a&m university,1876.0,higher education,10001+,"college station, texas, united states",united states,12106
+bloomberg lp,1981.0,financial services,10001+,"new york, new york, united states",united states,12093
+arizona state university,1885.0,higher education,10001+,"tempe, arizona, united states",united states,12088
+ppg industries,1883.0,chemicals,10001+,"pittsburgh, pennsylvania, united states",united states,12061
+fiserv,1984.0,information technology and services,10001+,"brookfield, wisconsin, united states",united states,12045
+conocophillips,2012.0,oil & energy,10001+,"houston, texas, united states",united states,12017
+michigan state university,,higher education,10001+,"east lansing, michigan, united states",united states,12003
+suntrust bank,1891.0,financial services,10001+,"atlanta, georgia, united states",united states,11960
+rockwell collins,1933.0,aviation & aerospace,10001+,"cedar rapids, iowa, united states",united states,11957
+office depot,1986.0,business supplies and equipment,10001+,"boca raton, florida, united states",united states,11948
+manulife,,financial services,10001+,"riverside, california, united states",united states,11921
+ceva logistics,2006.0,logistics and supply chain,10001+,"hoofddorp, north holland, netherlands",united states,11917
+"nbcuniversal media, llc",1926.0,entertainment,10001+,"new york, new york, united states",united states,11891
+university of phoenix,1976.0,higher education,10001+,"tempe, arizona, united states",united states,11801
+sutherland global services,1986.0,outsourcing/offshoring,10001+,"rochester, new york, united states",united states,11691
+harvard university,,higher education,10001+,"cambridge, massachusetts, united states",united states,11673
+mary kay cosmetics,,professional training & coaching,10001+,"albany, new york, united states",united states,11627
+ucla,1919.0,higher education,10001+,"los angeles, california, united states",united states,11624
+international paper,,paper & forest products,10001+,"memphis, tennessee, united states",united states,11618
+geico,1936.0,insurance,10001+,"chevy chase, maryland, united states",united states,11586
+ch2m hill,1946.0,civil engineering,10001+,"englewood, colorado, united states",united states,11571
+kellogg company,1906.0,consumer goods,10001+,"battle creek, michigan, united states",united states,11534
+purdue university,1869.0,higher education,10001+,"west lafayette, indiana, united states",united states,11530
+columbia university in the city of new york,,higher education,10001+,"new york, new york, united states",united states,11520
+chase,,financial services,10001+,"new york, new york, united states",united states,11470
+providence health & services,1859.0,hospital & health care,10001+,"renton, washington, united states",united states,11468
+university of illinois at urbana-champaign,1867.0,higher education,10001+,"champaign, illinois, united states",united states,11401
+whirlpool corporation,1911.0,consumer goods,10001+,"benton harbor, michigan, united states",united states,11390
+university of southern california,1880.0,research,10001+,"los angeles, california, united states",united states,11390
+rite aid,1968.0,retail,10001+,"harrisburg, pennsylvania, united states",united states,11323
+state of california,1850.0,government administration,10001+,"sacramento, california, united states",united states,11294
+vanguard,1975.0,financial services,10001+,"valley forge, pennsylvania, united states",united states,11284
+enterprise holdings,,"leisure, travel & tourism",10001+,"st. louis, missouri, united states",united states,11269
+leidos,1969.0,information technology and services,10001+,"reston, virginia, united states",united states,11250
+blackrock,1988.0,financial services,10001+,"new york, new york, united states",united states,11238
+mckesson,1833.0,hospital & health care,10001+,"san francisco, california, united states",united states,11207
+robert bosch,1906.0,mechanical or industrial engineering,10001+,"farmington hills, michigan, united states",united states,11100
+us army corps of engineers,,military,10001+,"washington, district of columbia, united states",united states,11056
+united states army reserve,1908.0,military,10001+,"fort bragg, north carolina, united states",united states,11043
+regions bank,1971.0,banking,10001+,"birmingham, alabama, united states",united states,11039
+the university of texas at austin,1883.0,higher education,10001+,"austin, texas, united states",united states,11035
+ppd,1985.0,pharmaceuticals,10001+,"wilmington, north carolina, united states",united states,11019
+grant thornton llp,1924.0,accounting,10001+,"chicago, illinois, united states",united states,11009
+the hartford,1810.0,financial services,10001+,"hartford, connecticut, united states",united states,10994
+nasa,1958.0,aviation & aerospace,10001+,"washington, district of columbia, united states",united states,10955
+new york university,1831.0,higher education,10001+,"new york, new york, united states",united states,10931
+university of pennsylvania,,higher education,10001+,"philadelphia, pennsylvania, united states",united states,10908
+paypal,1998.0,internet,10001+,"san jose, california, united states",united states,10904
+the goodyear tire & rubber company,1898.0,automotive,10001+,"akron, ohio, united states",united states,10893
+fifth third bank,1858.0,financial services,10001+,"cincinnati, ohio, united states",united states,10879
+wells fargo home mortgage,,banking,10001+,"des moines, iowa, united states",united states,10853
+symantec,1982.0,computer software,10001+,"mountain view, california, united states",united states,10830
+unicef,1946.0,non-profit organization management,10001+,"new york, new york, united states",united states,10829
+uc berkeley,1868.0,higher education,10001+,"berkeley, california, united states",united states,10808
+"starwood hotels & resorts worldwide, inc.",1980.0,hospitality,10001+,"stamford, connecticut, united states",united states,10785
+quest diagnostics,1967.0,hospital & health care,10001+,"madison, new jersey, united states",united states,10784
+sam's club,,retail,10001+,"bentonville, arkansas, united states",united states,10738
+rutgers university,,higher education,10001+,"new brunswick, new jersey, united states",united states,10717
+ge capital,,financial services,10001+,"norwalk, connecticut, united states",united states,10692
+westpac,1817.0,banking,10001+,"new york, new york, united states",united states,10682
+northern trust corporation,1889.0,financial services,10001+,"chicago, illinois, united states",united states,10672
+university of wisconsin-madison,,higher education,10001+,"madison, wisconsin, united states",united states,10627
+general mills,1928.0,consumer goods,10001+,"minneapolis, minnesota, united states",united states,10578
+aim,1962.0,retail,10001+,"bentonville, arkansas, united states",united states,10577
+unisys,,information technology and services,10001+,"blue bell, pennsylvania, united states",united states,10567
+burger king corporation,1954.0,restaurants,10001+,"miami, florida, united states",united states,10547
+tetra pak,,packaging and containers,10001+,"hull, iowa, united states",united states,10536
+banner health,1999.0,hospital & health care,10001+,"phoenix, arizona, united states",united states,10478
+upmc,1986.0,hospital & health care,10001+,"pittsburgh, pennsylvania, united states",united states,10468
+american family insurance,1927.0,insurance,10001+,"madison, wisconsin, united states",united states,10465
+aerotek,1983.0,staffing and recruiting,10001+,"hanover, maryland, united states",united states,10421
+m&t bank,1856.0,financial services,10001+,"buffalo, new york, united states",united states,10393
+visa,1958.0,information technology and services,10001+,"san francisco, california, united states",united states,10392
+marsh,,insurance,10001+,"new york, new york, united states",united states,10231
+cintas,1968.0,facilities services,10001+,"cincinnati, ohio, united states",united states,10221
+centers for disease control and prevention,1946.0,government administration,10001+,"atlanta, georgia, united states",united states,10192
+applied materials,1967.0,semiconductors,10001+,"santa clara, california, united states",united states,10118
+ebay,1995.0,internet,10001+,"san jose, california, united states",united states,10115
+first data corporation,1971.0,financial services,10001+,"atlanta, georgia, united states",united states,10109
+charles schwab,1973.0,financial services,10001+,"san francisco, california, united states",united states,10079
+parker hannifin,1918.0,mechanical or industrial engineering,10001+,"cleveland, ohio, united states",united states,10041
+advocare,1993.0,"health, wellness and fitness",10001+,"plano, texas, united states",united states,10031
+the world bank,1944.0,international trade and development,10001+,"washington, district of columbia, united states",united states,10027
+fairfax county public schools,,primary/secondary education,10001+,"falls church, virginia, united states",united states,10012
+procter & gamble,1837.0,consumer goods,10001+,"cincinnati, ohio, united states",united states,10005
+us forest service,1905.0,government administration,10001+,"washington, district of columbia, united states",united states,9989
+victoria's secret,1977.0,retail,10001+,"reynoldsburg, ohio, united states",united states,9975
+mastercard,1966.0,information technology and services,10001+,"purchase, new york, united states",united states,9974
+waste management,1894.0,environmental services,10001+,"houston, texas, united states",united states,9927
+massachusetts general hospital,1811.0,hospital & health care,10001+,"boston, massachusetts, united states",united states,9910
+world vision,1950.0,non-profit organization management,10001+,"monrovia, california, united states",united states,9868
+syntel,1980.0,information technology and services,10001+,"troy, michigan, united states",united states,9868
+northwell health,1997.0,hospital & health care,10001+,"lake success, new york, united states",united states,9866
+hyatt hotels corporation,1957.0,hospitality,10001+,"chicago, illinois, united states",united states,9863
+"alcon, a novartis company",1945.0,pharmaceuticals,10001+,"fort worth, texas, united states",united states,9861
+bechtel corporation,1898.0,construction,10001+,"san francisco, california, united states",united states,9846
+pacific gas and electric company,,utilities,10001+,"san francisco, california, united states",united states,9807
+ingram micro,1979.0,information technology and services,10001+,"irvine, california, united states",united states,9705
+nxp semiconductors,2006.0,semiconductors,10001+,"brabant, west virginia, united states",united states,9686
+emerson,1890.0,mechanical or industrial engineering,10001+,"st. louis, missouri, united states",united states,9663
+dollar general,1939.0,retail,10001+,"goodlettsville, tennessee, united states",united states,9633
+cornell university,,higher education,10001+,"ithaca, new york, united states",united states,9628
+msd,,pharmaceuticals,10001+,"kenilworth, new jersey, united states",united states,9583
+aurora health care,,hospital & health care,10001+,"milwaukee, wisconsin, united states",united states,9582
+panera bread,1981.0,restaurants,10001+,"st. louis, missouri, united states",united states,9563
+massachusetts institute of technology (mit),1861.0,higher education,10001+,"cambridge, massachusetts, united states",united states,9539
+sutter health,,hospital & health care,10001+,"sacramento, california, united states",united states,9531
+miami-dade county public schools,1885.0,education management,10001+,"miami, florida, united states",united states,9456
+citizens bank,1828.0,banking,10001+,"providence, rhode island, united states",united states,9435
+university of maryland,1856.0,higher education,10001+,"college park, maryland, united states",united states,9384
+"expedia, inc.",1996.0,internet,10001+,"bellevue, washington, united states",united states,9371
+"kbr, inc.",1919.0,construction,10001+,"houston, texas, united states",united states,9338
+arbonne international llc,1975.0,consumer goods,10001+,"irvine, california, united states",united states,9329
+undp,1974.0,international affairs,10001+,"new york, new york, united states",united states,9326
+sitel,1985.0,outsourcing/offshoring,10001+,"nashville, tennessee, united states",united states,9321
+infor,2003.0,computer software,10001+,"new york, new york, united states",united states,9308
+"university of california, san diego",1960.0,higher education,10001+,"la jolla, california, united states",united states,9291
+ucsf,1873.0,research,10001+,"san francisco, california, united states",united states,9289
+domino's pizza,1960.0,restaurants,10001+,"ann arbor, michigan, united states",united states,9265
+state farm agent,1922.0,insurance,10001+,"bloomington, illinois, united states",united states,9255
+gartner,1979.0,information technology and services,10001+,"stamford, connecticut, united states",united states,9249
+parexel,1982.0,pharmaceuticals,10001+,"waltham, massachusetts, united states",united states,9231
+micron technology,1978.0,semiconductors,10001+,"boise, idaho, united states",united states,9192
+ca technologies,1976.0,computer software,10001+,"new york, new york, united states",united states,9187
+the estée lauder companies inc.,1946.0,cosmetics,10001+,"new york, new york, united states",united states,9187
+seagate technology,1979.0,computer hardware,10001+,"cupertino, california, united states",united states,9150
+ricoh americas corporation,1962.0,information technology and services,10001+,"malvern, pennsylvania, united states",united states,9121
+university of pittsburgh,,higher education,10001+,"pittsburgh, pennsylvania, united states",united states,9072
+md anderson cancer center,1944.0,hospital & health care,10001+,"houston, texas, united states",united states,9064
+sanmina,1980.0,electrical/electronic manufacturing,10001+,"san jose, california, united states",united states,9026
+uc davis,1908.0,higher education,10001+,"davis, california, united states",united states,9005
+atento,1999.0,telecommunications,10001+,"madrid, madrid, spain",united states,8980
+rsm us llp,1926.0,accounting,10001+,"chicago, illinois, united states",united states,8966
+state of michigan,1837.0,government administration,10001+,"lansing, michigan, united states",united states,8963
+verizon business,1988.0,information technology and services,10001+,"basking ridge, new jersey, united states",united states,8942
+pratt & whitney,1925.0,aviation & aerospace,10001+,"east hartford, connecticut, united states",united states,8924
+us air force reserve,1948.0,military,10001+,"tinker afb, oklahoma, united states",united states,8903
+intermountain healthcare,1975.0,hospital & health care,10001+,"murray, utah, united states",united states,8900
+the kraft heinz company,2015.0,food & beverages,10001+,"pittsburgh, pennsylvania, united states",united states,8898
+cb&i,1889.0,oil & energy,10001+,"the woodlands, texas, united states",united states,8878
+usda,1862.0,government administration,10001+,"washington, district of columbia, united states",united states,8873
+national institutes of health,1887.0,research,10001+,"bethesda, maryland, united states",united states,8782
+kindred healthcare,1985.0,hospital & health care,10001+,"louisville, kentucky, united states",united states,8775
+home instead senior care,1994.0,individual & family services,10001+,"omaha, nebraska, united states",united states,8759
+tyson foods,1935.0,food production,10001+,"springdale, arkansas, united states",united states,8747
+clark county school district,1956.0,education management,10001+,"las vegas, nevada, united states",united states,8744
+meb,1998.0,real estate,10001+,"tucson, arizona, united states",united states,8648
+concentrix,1983.0,outsourcing/offshoring,10001+,"fremont, california, united states",united states,8642
+paychex,1971.0,human resources,10001+,"rochester, new york, united states",united states,8631
+union pacific railroad,1862.0,transportation/trucking/railroad,10001+,"omaha, nebraska, united states",united states,8619
+gap inc.,1969.0,retail,10001+,"san francisco, california, united states",united states,8610
+sysco,1970.0,food & beverages,10001+,"houston, texas, united states",united states,8585
+grainger,1927.0,business supplies and equipment,10001+,"lake forest, illinois, united states",united states,8556
+colliers international,1976.0,commercial real estate,10001+,"seattle, washington, united states",united states,8528
+indiana university bloomington,1820.0,higher education,10001+,"bloomington, indiana, united states",united states,8505
+urs corporation,,civil engineering,10001+,"san francisco, california, united states",united states,8498
+carolinas healthcare system,1943.0,hospital & health care,10001+,"charlotte, north carolina, united states",united states,8497
+motorola solutions,1928.0,information technology and services,10001+,"schaumburg, illinois, united states",united states,8474
+petsmart,1987.0,retail,10001+,"phoenix, arizona, united states",united states,8461
+memorial sloan kettering cancer center,1884.0,hospital & health care,10001+,"new york, new york, united states",united states,8449
+zimmer biomet,1927.0,medical devices,10001+,"warsaw, indiana, united states",united states,8433
+netapp,1992.0,information technology and services,10001+,"sunnyvale, california, united states",united states,8412
+university of illinois at chicago,1965.0,higher education,10001+,"chicago, illinois, united states",united states,8407
+avaya,2000.0,telecommunications,10001+,"santa clara, california, united states",united states,8405
+beaumont health system,,hospital & health care,10001+,"royal oak, michigan, united states",united states,8342
+c.h. robinson,1905.0,logistics and supply chain,10001+,"eden prairie, minnesota, united states",united states,8301
+bnsf railway,,transportation/trucking/railroad,10001+,"fort worth, texas, united states",united states,8261
+university of north carolina at chapel hill,,higher education,10001+,"chapel hill, north carolina, united states",united states,8258
+us foods,,food & beverages,10001+,"rosemont, illinois, united states",united states,8257
+u.s. department of justice,,law practice,10001+,"washington, district of columbia, united states",united states,8248
+houston isd,1879.0,education management,10001+,"houston, texas, united states",united states,8239
+"the tjx companies, inc.",1956.0,retail,10001+,"framingham, massachusetts, united states",united states,8237
+northwestern university,1851.0,higher education,10001+,"evanston, illinois, united states",united states,8214
+harris corporation,1895.0,defense & space,10001+,"melbourne, florida, united states",united states,8213
+utc aerospace systems,2012.0,aviation & aerospace,10001+,"charlotte, north carolina, united states",united states,8209
+express scripts,1986.0,hospital & health care,10001+,"st. louis, missouri, united states",united states,8194
+infineon technologies,1999.0,semiconductors,10001+,"neubiberg, bayern, germany",united states,8178
+caci international inc,1962.0,information technology and services,10001+,"arlington, virginia, united states",united states,8174
+hertz,1918.0,"leisure, travel & tourism",10001+,"naples, florida, united states",united states,8172
+adt,1874.0,security and investigations,10001+,"boca raton, florida, united states",united states,8150
+"the ritz-carlton hotel company, l.l.c.",1983.0,hospitality,10001+,"orlando, florida, united states",united states,8134
+robert half,1948.0,staffing and recruiting,10001+,"menlo park, california, united states",united states,8118
+nyu langone medical center,1841.0,hospital & health care,10001+,"new york, new york, united states",united states,8110
+mercy,1986.0,hospital & health care,10001+,"chesterfield, missouri, united states",united states,8102
+the university of arizona,1890.0,higher education,10001+,"tucson, arizona, united states",united states,8096
+university of south florida,1956.0,higher education,10001+,"tampa, florida, united states",united states,8087
+colorado state university,1870.0,higher education,10001+,"fort collins, colorado, united states",united states,8072
+cox communications,1984.0,broadcast media,10001+,"atlanta, georgia, united states",united states,8064
+young living essential oils,1993.0,"health, wellness and fitness",10001+,"lehi, utah, united states",united states,8060
+"royal caribbean cruises, ltd.",1968.0,"leisure, travel & tourism",10001+,"miami, florida, united states",united states,8059
+north carolina state university,1887.0,higher education,10001+,"raleigh, north carolina, united states",united states,8052
+diebold nixdorf,1859.0,financial services,10001+,"north canton, ohio, united states",united states,8048
+university of cincinnati,1819.0,higher education,10001+,"cincinnati, ohio, united states",united states,8034
+fda,1906.0,government administration,10001+,"silver spring, maryland, united states",united states,8032
+ust global,1999.0,information technology and services,10001+,"aliso viejo, california, united states",united states,8010
+ge oil & gas,,oil & energy,10001+,"houston, texas, united states",united states,8009
+deloitte consulting,,management consulting,10001+,"new york, new york, united states",united states,8005
+ntt data services,1965.0,information technology and services,10001+,"plano, texas, united states",united states,7998
+taco bell,,restaurants,10001+,"irvine, california, united states",united states,7989
+georgia-pacific llc,1927.0,paper & forest products,10001+,"atlanta, georgia, united states",united states,7971
+igate,1978.0,information technology and services,10001+,"bridgewater, new jersey, united states",united states,7954
+"stanley black & decker, inc.",1843.0,consumer goods,10001+,"new britain, connecticut, united states",united states,7949
+spectrum health,1997.0,hospital & health care,10001+,"grand rapids, michigan, united states",united states,7929
+arthur j. gallagher & co.,1927.0,insurance,10001+,"rolling meadows, illinois, united states",united states,7898
+new york-presbyterian hospital,,hospital & health care,10001+,"new york, new york, united states",united states,7890
+raymond james,1962.0,financial services,10001+,"st. petersburg, florida, united states",united states,7871
+florida hospital,1908.0,hospital & health care,10001+,"orlando, florida, united states",united states,7866
+pra health sciences,1976.0,research,10001+,"raleigh, north carolina, united states",united states,7854
+it works global,2001.0,"health, wellness and fitness",10001+,"palmetto, florida, united states",united states,7854
+meijer,1934.0,retail,10001+,"grand rapids, michigan, united states",united states,7845
+labcorp,,hospital & health care,10001+,"burlington, north carolina, united states",united states,7835
+ups supply chain solutions,1907.0,logistics and supply chain,10001+,"cobb, georgia, united states",united states,7793
+aricent,2006.0,outsourcing/offshoring,10001+,"redwood city, california, united states",united states,7769
+duke university,,higher education,10001+,"durham, north carolina, united states",united states,7768
+heb,1905.0,retail,10001+,"san antonio, texas, united states",united states,7767
+parsons corporation,1944.0,civil engineering,10001+,"pasadena, california, united states",united states,7762
+keybank,1849.0,banking,10001+,"cleveland, ohio, united states",united states,7753
+experian,1980.0,information services,10001+,"costa mesa, california, united states",united states,7751
+dominion,,utilities,10001+,"richmond, virginia, united states",united states,7751
+dyncorp international,1951.0,defense & space,10001+,"mclean, virginia, united states",united states,7733
+massmutual financial group,1851.0,financial services,10001+,"springfield, massachusetts, united states",united states,7732
+cameron,1833.0,oil & energy,10001+,"houston, texas, united states",united states,7727
+dignity health,,hospital & health care,10001+,"san francisco, california, united states",united states,7715
+ralph lauren,1968.0,apparel & fashion,10001+,"new york, new york, united states",united states,7699
+"penn medicine, university of pennsylvania health system",,hospital & health care,10001+,"philadelphia, pennsylvania, united states",united states,7677
+maxim healthcare services,1988.0,hospital & health care,10001+,"columbia, maryland, united states",united states,7662
+nerium international,2011.0,cosmetics,10001+,"addison, texas, united states",united states,7648
+red hat,1993.0,computer software,10001+,"raleigh, north carolina, united states",united states,7609
+georgia institute of technology,1888.0,higher education,10001+,"atlanta, georgia, united states",united states,7572
+electronic arts (ea),1982.0,entertainment,10001+,"redwood city, california, united states",united states,7561
+earthlink,1994.0,information technology and services,10001+,"atlanta, georgia, united states",united states,7552
+orange county public schools,,primary/secondary education,10001+,"orlando, florida, united states",united states,7543
+johns hopkins university,1876.0,higher education,10001+,"baltimore, maryland, united states",united states,7529
+"ross stores, inc.",1957.0,retail,10001+,"dublin, california, united states",united states,7522
+department of education,1980.0,government administration,10001+,"washington, district of columbia, united states",united states,7476
+pitney bowes,1920.0,information technology and services,10001+,"stamford, connecticut, united states",united states,7464
+china mobile,1997.0,telecommunications,10001+,"los angeles, california, united states",united states,7464
