@@ -115,13 +115,49 @@ def resolve_city_from_keyword(keyword, city_list):
 # Prefers iconic case-study cities by keyword;
 # pads with top-data cities when keywords don’t match.
 # ─────────────────────────────────────────────
-CASE_STUDY_KEYWORDS = ["Detroit", "Austin", "Seattle", "Chicago", "Phoenix"]
+# ─────────────────────────────────────────────
+# FORCE-ADD IMPORTANT METROS (keyword match)
+# ─────────────────────────────────────────────
 
-# Build keyword → resolved dataset city map
-KEYWORD_TO_CITY = {kw: resolve_city_from_keyword(kw, TOP_100_CITIES) for kw in CASE_STUDY_KEYWORDS}
+CASE_STUDY_KEYWORDS = [
+    "Detroit",
+    "New York",
+    "Los Angeles",
+    "San Jose",
+    "Seattle",
+]
 
-# Start with matched keywords (preserving order)
+# Build full metro universe from integrated dataset
+ALL_CITIES = []
+if integrated_df is not None:
+    city_col_name = integrated_df['_city_col'].iloc[0] if '_city_col' in integrated_df.columns else 'city_state'
+    tmp = integrated_df.copy()
+    tmp['city_state'] = tmp[city_col_name].astype(str)
+    ALL_CITIES = sorted(tmp['city_state'].unique().tolist())
+
+def resolve_city_from_keyword(keyword, city_list):
+    kw = keyword.lower().strip()
+    return next((c for c in city_list if kw in str(c).lower()), None)
+
+# Match keywords against ALL cities (not just TOP_100)
+KEYWORD_TO_CITY = {}
+for kw in CASE_STUDY_KEYWORDS:
+    match = resolve_city_from_keyword(kw, ALL_CITIES)
+    KEYWORD_TO_CITY[kw] = match
+
+# Start with these 5 (if found)
 CURATED_CITIES = [KEYWORD_TO_CITY[kw] for kw in CASE_STUDY_KEYWORDS if KEYWORD_TO_CITY[kw]]
+
+# If fewer than 5 found, pad with top data cities
+for city in TOP_100_CITIES:
+    if len(CURATED_CITIES) >= 5:
+        break
+    if city not in CURATED_CITIES:
+        CURATED_CITIES.append(city)
+
+# Final fallback
+if not CURATED_CITIES:
+    CURATED_CITIES = TOP_100_CITIES[:5]
 
 # Pad to exactly 5 with next best top-data cities not already included
 for city in TOP_100_CITIES:
@@ -280,7 +316,8 @@ if tab == "🏠 Home":
             with st.expander("⚠️ Scope & limits"):
                 st.markdown("This is a **screening tool**, not a price forecast. Always layer in macro factors (rates, supply, zoning) before acting.")
         with c_right:
-            st.metric("Cities / metros", "13,330")
+            st.metric("Cities", "13,330")
+            st.metric("Metros", "213")
             st.metric("Years of data", "50")
             st.metric("Avg lag signal", "1–2 yrs")
             st.metric("Data coverage", "96%")
@@ -399,7 +436,7 @@ if tab == "🏠 Home":
     st.caption("*Disclaimer: No causal claims — all findings are associative and data-driven.*")
 
 if tab == "🧩 Build the Dataset":
-    st.title("From Messy Sources to One City Timeline")
+    st.title("Data Pipeline: From Raw Sources to Integrated Panels")
 
     st.markdown("""
     **📊 Data Pipeline:**  
@@ -409,28 +446,51 @@ if tab == "🧩 Build the Dataset":
     """)
 
     pipeline_data = pd.DataFrame({
-        "Dataset": ["companies_sorted.csv", "companies_sorted.csv",
-                    "companies-2023-q4-sm.csv", "companies-2023-q4-sm.csv",
-                    "hpi_at_metro.csv", "hpi_at_metro.csv",
-                    "Zillow_Housing_Dataset.csv", "Zillow_Housing_Dataset.csv",
-                    "Final Panel"],
-        "Stage": ["Raw", "Cleaned", "Raw", "Cleaned",
-                  "Raw", "Cleaned", "Raw", "Cleaned",
-                  "Integrated"],
-        "Rows": [7173426, 40258, 19486334, 0, 83230, 69828, 895, 230406, 275438],
-        "Columns": [11, 7, 11, 0, 6, 6, 317, 7, 15],
-        "Notes": [
-            "Some missing values",
-            "Filtered to US companies with 100+ employees; dropped unwanted columns",
-            "Very large dataset",
-            "Filtered to US companies with 100+ employees; dropped unwanted columns",
-            "Needs to be recomputed for percent change",
-            "Split location into city/state; created datetime column; dropped rows without HPI",
-            "Many empty rows",
-            "Sorted for time; filled small gaps; dropped NaNs",
-            "Cleaned & Merged!"
-        ]
-    })
+    "Dataset": [
+        "companies_sorted.csv", "companies_sorted.csv",
+        "companies-2023-q4-sm.csv", "companies-2023-q4-sm.csv",
+        "hpi_at_metro.csv", "hpi_at_metro.csv",
+        "Zillow_Housing_Dataset.csv", "Zillow_Housing_Dataset.csv",
+        "firmscape_integrated_quarterly_cleaned.csv",
+        "Final Panel"
+    ],
+    "Stage": [
+        "Raw", "Cleaned",
+        "Raw", "Cleaned",
+        "Raw", "Cleaned",
+        "Raw", "Cleaned",
+        "Integrated (Quarterly, cleaned)",
+        "Integrated (Regional + Industry signals)"
+    ],
+    "Rows": [
+        7173426, 40258,
+        19486334, 0,
+        83230, 69828,
+        895, 230406,
+        71408,
+        275438
+    ],
+    "Columns": [
+        11, 7,
+        11, 0,
+        6, 6,
+        317, 7,
+        34,
+        15
+    ],
+    "Notes": [
+        "Some missing values",
+        "Filtered to US companies with 100+ employees; dropped unwanted columns",
+        "Very large dataset",
+        "Filtered to US companies with 100+ employees; dropped unwanted columns",
+        "Needs to be recomputed for percent change",
+        "Split location into city/state; created datetime column; dropped rows without HPI",
+        "Many empty rows",
+        "Sorted for time; filled small gaps; dropped NaNs",
+        "Quarterly data, Cleaned & Merged!",
+        "Cleaned & Merged!"
+    ]
+})
     st.dataframe(pipeline_data, height=500, width=900)
 
 # ─────────────────────────────────────────────
@@ -459,7 +519,18 @@ if tab == "📊 EDA Explorer":
         city_col_eda = idf_eda['_city_col'].iloc[0] if '_city_col' in idf_eda.columns else 'city_state'
         idf_eda['city_state'] = idf_eda[city_col_eda].astype(str)
         # Use top cities from dataset — prefer curated 5, pad with more top cities
-        eda_cities = [c for c in CURATED_CITIES if c in TOP_100_CITIES] or TOP_100_CITIES[:5]
+        PINNED_KEYWORDS = ["San Jose", "New York", "Los Angeles", "Seattle", "Detroit"]
+
+        def resolve_city(keyword):
+            keyword = keyword.lower()
+            return next(
+                (c for c in idf_eda['city_state'].unique()
+                 if keyword in str(c).lower()),
+                None
+            )
+
+        eda_cities = [resolve_city(k) for k in PINNED_KEYWORDS]
+        eda_cities = [c for c in eda_cities if c is not None]
     else:
         idf_eda = None
         eda_cities = CURATED_CITIES
@@ -535,9 +606,24 @@ if tab == "📊 EDA Explorer":
                     f"Prices rose <b>{pct_positive:.0f}%</b> of the time, avg <b>{avg*100:.1f}%/yr</b>. "
                     f"{'High volatility — sensitive to shocks.' if volatility > 5 else 'Relatively stable growth pattern.'}"
                 )
+
                 st.markdown(
-                    f'<div style="background:#1a2a1a; border-left:4px solid #4f8ef7; border-radius:6px; padding:10px 14px; margin:8px 0;">'
-                    f'💡 <strong>Takeaway:</strong> {takeaway_text}</div>',
+                    f"""
+                        <div style="
+                        background:#1f2f1f;
+                        border-left:4px solid #4f8ef7;
+                        border-radius:8px;
+                        padding:12px 16px;
+                        margin:8px 0;
+                        color:#e8eefc;
+                        line-height:1.5;
+                    ">
+                    <span style="font-weight:600; color:#ffffff;">💡 Takeaway:</span>
+                    <span style="color:#e8eefc;">
+                    {takeaway_text.replace('<b>', '<b style="color:#ffffff;">')}
+                    </span>
+                    </div>
+                    """,
                     unsafe_allow_html=True
                 )
 
@@ -882,16 +968,18 @@ if tab == "🔎 Evidence":
         ))
         fig_ts.update_layout(
             title=f"{city_choice} — Home Price Change Over Time",
-            template='plotly_dark',
-            yaxis=dict(title=housing_metric_label, titlefont=dict(color='#4f8ef7')),
-            legend=dict(x=0, y=1.1, orientation='h'),
+            template="plotly_dark",
+            yaxis=dict(
+            title=dict(text=housing_metric_label, font=dict(color="#4f8ef7"))
+            ),
+            legend=dict(x=0, y=1.1, orientation="h"),
             height=400,
             xaxis=dict(
-                title=dict(text="Quarter (Year + Quarter)", font=dict(color='white')),
-                tickmode='array',
-                tickvals=city_ts['yq'].iloc[::16].tolist(),
-                tickangle=45
-            )
+            title=dict(text="Quarter (Year + Quarter)", font=dict(color="white")),
+            tickmode="array",
+            tickvals=city_ts["yq"].iloc[::16].tolist(),
+            tickangle=45,
+            ),
         )
         st.plotly_chart(fig_ts, use_container_width=True)
 
@@ -1303,107 +1391,351 @@ if tab == "✅ Validation & Modeling":
             st.dataframe(pd.DataFrame(city_results), use_container_width=True)
 
 # ─────────────────────────────────────────────
-# OPPORTUNITY LAB TAB
+# OPPORTUNITY LAB (Model-based)
 # ─────────────────────────────────────────────
 if tab == "🚀 Opportunity Lab":
-    st.title("🚀 Opportunity Lab: The 'Next Hub' Finder")
+    st.title("🚀 Opportunity Lab (Model-Based Screening)")
     st.markdown(
-        "Build your own investment shortlist by weighting the economic signals that matter most to you."
+        """
+This tool turns our **modeling predictors** into an **interactive screening & ranking engine**.
+
+- It is a **shortlisting tool**, not a perfect forecast.
+- The score is built from **6 key drivers** (chosen from the 12-feature modeling set).
+- The scenario simulator tests: **what if multiple drivers shift together?**
+        """
     )
 
-    if integrated_df is not None:
-        opp_df_source = integrated_df.copy()
-        city_col = 'city_state'
-        growth_col = 'firms_founded_yoy'
-        div_col = 'industry_count_new'
-        st.success(f"✅ Using `{integrated_fname}`")
-    else:
-        opp_df_source = merged_companies_housing.copy()
-        city_col = 'city_x'
-        growth_col = 'pct_change'
-        div_col = None
-        st.warning("⚠️ Integrated dataset not found — using merged_companies_housing fallback.")
+    # ----------------------------
+    # Load modeling panel
+    # ----------------------------
+    panel_path = Path("firmscape_integrated_quarterly_cleaned.csv")
+    if not panel_path.exists():
+        st.error("Missing `firmscape_integrated_quarterly_cleaned.csv` in app directory.")
+        st.stop()
 
+    df = pd.read_csv(panel_path)
+    METRO_COL = "metro_name" if "metro_name" in df.columns else "city_state"
+    if "year" not in df.columns:
+        st.error("Panel missing `year` column.")
+        st.stop()
+
+    # Coerce core time fields
+    df["year"] = pd.to_numeric(df["year"], errors="coerce")
+    df["quarter"] = pd.to_numeric(df.get("quarter", pd.Series(np.nan, index=df.index)), errors="coerce")
+    df = df.dropna(subset=["year"])
+    df["year"] = df["year"].astype(int)
+    if "quarter" in df.columns:
+        df["quarter"] = df["quarter"].fillna(1).astype(int)
+    if "yq" not in df.columns and "quarter" in df.columns:
+        df["yq"] = df["year"].astype(str) + "Q" + df["quarter"].astype(str)
+
+    # ----------------------------
+    # Modeling features (12) — used for missingness gate
+    # ----------------------------
+    MODEL_FEATURES_12 = [
+        "firms_founded_yoy",
+        "firms_founded_yoy_lag1q",
+        "firms_founded_yoy_lag4q",
+        "hhi_new",
+        "hhi_new_lag1q",
+        "hhi_new_lag4q",
+        "industry_count_new",
+        "firm_count_total",
+        "hhi_stock",
+        "share_large_proxy",
+        "fhfa_yoy",
+        "zillow_price_q",
+    ]
+    missing_model_cols = [c for c in MODEL_FEATURES_12 if c not in df.columns]
+    if missing_model_cols:
+        st.error(f"Panel missing required modeling columns (needed for gating): {missing_model_cols}")
+        st.stop()
+
+    # ----------------------------
+    # 6 strategy features (subset used for score + scenarios)
+    # ----------------------------
+    STRAT_FEATURES = [
+        "firms_founded_yoy_lag1q",
+        "industry_count_new",
+        "hhi_new",
+        "fhfa_yoy",
+        "zillow_price_q",
+        "firm_count_total",
+    ]
+    missing_strat = [c for c in STRAT_FEATURES if c not in df.columns]
+    if missing_strat:
+        st.error(f"Panel missing required strategy columns: {missing_strat}")
+        st.stop()
+
+    # ----------------------------
+    # Friendly names + meanings (UI)
+    # ----------------------------
+    FEATURE_LABEL = {
+        "firms_founded_yoy_lag1q": "Firm formation growth (lead, 1Q lag)",
+        "industry_count_new": "Industry diversity (# new-firm industries)",
+        "hhi_new": "Industry concentration of new firms (HHI)",
+        "fhfa_yoy": "Annual housing price growth (FHFA YoY %)",
+        "zillow_price_q": "Affordability / price level (Zillow)",
+        "firm_count_total": "Total firms (ecosystem scale)",
+    }
+    FEATURE_HELP = {
+        "firms_founded_yoy_lag1q": "YoY growth in new firm formation, lagged 1 quarter (lead signal).",
+        "industry_count_new": "Number of distinct industries among new firms (higher = more diverse).",
+        "hhi_new": "HHI of new-firm industries (higher = more concentrated / less diverse).",
+        "fhfa_yoy": "FHFA YoY housing growth (rate of change of the FHFA home value index).",
+        "zillow_price_q": "Zillow price level (higher = less affordable).",
+        "firm_count_total": "Total number of firms in the metro (stock size / scale).",
+    }
+
+    # Directionality: what counts as “better”
+    INVERT = {
+        "zillow_price_q": True,  # lower price level => better affordability
+        "hhi_new": True,         # lower concentration => more diverse
+    }
+
+    # ----------------------------
+    # Perspective-based default weights (same 6 features; different defaults)
+    # ----------------------------
+    DEFAULT_WEIGHTS_BY_PERSPECTIVE = {
+        "🏠 Housing Investor": {
+            "firms_founded_yoy_lag1q": 0.30,
+            "industry_count_new":      0.15,
+            "hhi_new":                0.10,
+            "fhfa_yoy":               0.25,
+            "zillow_price_q":         0.15,
+            "firm_count_total":       0.05,
+        },
+        "📊 Business Analyst": {
+            "firms_founded_yoy_lag1q": 0.25,
+            "industry_count_new":      0.20,
+            "hhi_new":                0.15,
+            "fhfa_yoy":               0.15,
+            "zillow_price_q":         0.10,
+            "firm_count_total":       0.15,
+        },
+        "🔬 Researcher": {
+            "firms_founded_yoy_lag1q": 0.20,
+            "industry_count_new":      0.20,
+            "hhi_new":                0.20,
+            "fhfa_yoy":               0.20,
+            "zillow_price_q":         0.10,
+            "firm_count_total":       0.10,
+        },
+    }
+    default_w = DEFAULT_WEIGHTS_BY_PERSPECTIVE.get(stakeholder, DEFAULT_WEIGHTS_BY_PERSPECTIVE["📊 Business Analyst"])
+
+    # ----------------------------
+    # Sidebar: weights + modeling window controls
+    # ----------------------------
     with st.sidebar:
-        st.header("⚖️ Strategy Weights")
-        w_growth = st.slider("Company Growth", 0.0, 1.0, 0.4, key="w_growth")
-        w_diversity = st.slider("Industry Diversity", 0.0, 1.0, 0.3, key="w_div")
-        w_afford = st.slider("Housing Affordability", 0.0, 1.0, 0.2, key="w_aff")
-        w_stability = st.slider("Price Stability", 0.0, 1.0, 0.1, key="w_stab")
+        st.header("⚖️ Strategy Weights (Top 6 drivers)")
+        st.caption("Weights are normalized automatically.")
+
+        w1 = st.slider(FEATURE_LABEL["firms_founded_yoy_lag1q"], 0.0, 1.0, float(default_w["firms_founded_yoy_lag1q"]), help=FEATURE_HELP["firms_founded_yoy_lag1q"])
+        w2 = st.slider(FEATURE_LABEL["industry_count_new"],      0.0, 1.0, float(default_w["industry_count_new"]),      help=FEATURE_HELP["industry_count_new"])
+        w3 = st.slider(FEATURE_LABEL["hhi_new"],                0.0, 1.0, float(default_w["hhi_new"]),                help=FEATURE_HELP["hhi_new"])
+        w4 = st.slider(FEATURE_LABEL["fhfa_yoy"],               0.0, 1.0, float(default_w["fhfa_yoy"]),               help=FEATURE_HELP["fhfa_yoy"])
+        w5 = st.slider(FEATURE_LABEL["zillow_price_q"],         0.0, 1.0, float(default_w["zillow_price_q"]),         help=FEATURE_HELP["zillow_price_q"])
+        w6 = st.slider(FEATURE_LABEL["firm_count_total"],       0.0, 1.0, float(default_w["firm_count_total"]),       help=FEATURE_HELP["firm_count_total"])
+
         st.divider()
-        lookback = st.slider("Analysis Window (Years)", 1, 5, 3, key="lookback")
+        lookback_years = st.slider(
+            "Analysis Window (Years)", 1, 10, 3,
+            help="Score is computed using the most recent N years ending at the latest year in the dataset."
+        )
+        max_min_quarters = int(4 * lookback_years)
 
-    opp_df = opp_df_source.copy()
-    if integrated_df is not None:
-        city_col_name2 = opp_df['_city_col'].iloc[0] if '_city_col' in opp_df.columns else 'city_state'
-        opp_df['city_state'] = opp_df[city_col_name2].astype(str)
-        city_col = 'city_state'
+        prev_min_q = int(st.session_state.get("min_quarters", min(12, max_min_quarters)))
+        default_min_q = min(prev_min_q, max_min_quarters)
 
-    if div_col and div_col in opp_df.columns:
-        city_stats = opp_df.groupby(city_col).agg(
-            growth=(growth_col, 'mean'),
-            diversity=(div_col, 'mean')
-        ).reset_index()
+        min_quarters = st.slider(
+            "Minimum quarters of data required",
+            min_value=4,
+            max_value=max_min_quarters,
+            value=default_min_q,
+            key="min_quarters",
+            help="Must be ≤ 4 × analysis window. This is the minimum number of quarters a metro must have (within the window) to be scored."
+        )
+
+    weights = {
+        "firms_founded_yoy_lag1q": w1,
+        "industry_count_new": w2,
+        "hhi_new": w3,
+        "fhfa_yoy": w4,
+        "zillow_price_q": w5,
+        "firm_count_total": w6,
+    }
+    wsum = sum(weights.values())
+    if wsum == 0:
+        st.error("All weights are 0 — increase at least one weight.")
+        st.stop()
+    weights = {k: v / wsum for k, v in weights.items()}
+
+    # ----------------------------
+    # Missingness gate (match notebook intent)
+    # - FULL modeling history (2010–2024 if present) + ALL 12 model features
+    # - Keep metros with missingness <= 0.54
+    # ----------------------------
+    MISSINGNESS_THRESHOLD = 0.54
+    MODEL_YEAR_MIN = 2010
+    MODEL_YEAR_MAX = 2024 if (df["year"].max() >= 2024) else int(df["year"].max())
+
+    df_gate = df[df["year"].between(MODEL_YEAR_MIN, MODEL_YEAR_MAX)].copy()
+
+    def metro_missingness(g: pd.DataFrame) -> float:
+        return float(g[MODEL_FEATURES_12].isna().mean().mean())
+
+    metro_missing = df_gate.groupby(METRO_COL).apply(metro_missingness)
+    metros_total = int(metro_missing.shape[0])
+    keep_metros = metro_missing[metro_missing <= MISSINGNESS_THRESHOLD].index
+    metros_kept = int(len(keep_metros))
+    metros_dropped = metros_total - metros_kept
+
+    # ----------------------------
+    # Analysis window (scoring only)
+    # ----------------------------
+    df_kept = df_gate[df_gate[METRO_COL].isin(keep_metros)].copy()
+    max_year = int(df_kept["year"].max())
+    min_year = max_year - int(lookback_years) + 1
+    df_lb = df_kept[df_kept["year"].between(min_year, max_year)].copy()
+
+    # ----------------------------
+    # Aggregate metro stats over window
+    # ----------------------------
+    agg = {c: "mean" for c in STRAT_FEATURES}
+    metro = df_lb.groupby(METRO_COL).agg(agg)
+    metro["n_quarters"] = df_lb.groupby(METRO_COL).size()
+    metro = metro.reset_index()
+    metro = metro[metro["n_quarters"] >= int(min_quarters)].copy()
+
+    st.caption(f"Rows after filters: {len(df_lb):,} | Year min/max: {min_year} {max_year} | Metros rankable (after min quarters): {len(metro):,}")
+
+    if metro.empty:
+        st.error("No metros left after filters. Reduce minimum quarters or widen the analysis window.")
+        st.stop()
+
+    # ----------------------------
+    # Normalize each feature (0–1) + score
+    # ----------------------------
+    def minmax(s: pd.Series) -> pd.Series:
+        s = s.astype(float)
+        rng = s.max() - s.min()
+        if np.isfinite(rng) and rng > 0:
+            return (s - s.min()) / rng
+        return pd.Series(np.full(len(s), 0.5), index=s.index)
+
+    for f in STRAT_FEATURES:
+        base = metro[f].astype(float).replace([np.inf, -np.inf], np.nan)
+        base = base.fillna(base.median())
+        n = minmax(base)
+        if INVERT.get(f, False):
+            n = 1 - n
+        metro[f + "_norm"] = n
+
+    metro["Opportunity_Score"] = 100 * sum(weights[f] * metro[f + "_norm"] for f in STRAT_FEATURES)
+    metro = metro.sort_values("Opportunity_Score", ascending=False).reset_index(drop=True)
+    metro["Rank"] = metro.index + 1
+
+    # ----------------------------
+    # Leaderboard + Search
+    # ----------------------------
+    st.subheader("🏆 Opportunity Leaderboard (Model-Based Score)")
+    top_n = st.slider("Show top N metros", 10, 25, 25)
+    search = st.text_input("Search metros (still within kept/rankable set)", "")
+
+    if search.strip():
+        show = metro[metro[METRO_COL].astype(str).str.contains(search, case=False, na=False)].copy()
+        show = show.sort_values("Opportunity_Score", ascending=False).head(int(top_n))
+        if show.empty:
+            st.warning("No matching metros found inside the current filters (missingness gate + window + min quarters).")
     else:
-        city_stats = opp_df.groupby(city_col).agg(
-            growth=(growth_col, 'mean')
-        ).reset_index()
-        city_stats['diversity'] = 1
+        show = metro.head(int(top_n)).copy()
 
-    for col in ['growth', 'diversity']:
-        rng = city_stats[col].max() - city_stats[col].min()
-        if rng > 0:
-            city_stats[col + '_norm'] = (city_stats[col] - city_stats[col].min()) / rng
-        else:
-            city_stats[col + '_norm'] = 0.5
+    st.dataframe(show[["Rank", METRO_COL, "Opportunity_Score", "n_quarters"]], use_container_width=True, hide_index=True)
 
-    city_stats['Final_Score'] = (
-        city_stats['growth_norm'] * w_growth +
-        city_stats['diversity_norm'] * w_diversity
-    ) * 100
+    fig = go.Figure(go.Bar(
+        x=show["Opportunity_Score"][::-1],
+        y=show[METRO_COL][::-1],
+        orientation="h",
+        hovertemplate="%{y}<br>Score=%{x:.1f}<extra></extra>",
+    ))
+    fig.update_layout(height=520, margin=dict(l=10, r=10, t=40, b=10), xaxis_title="Opportunity Score", yaxis_title="Metro", template="plotly_dark")
+    st.plotly_chart(fig, use_container_width=True)
 
-    st.subheader("🏆 The 'Next Hub' Leaderboard")
-    top_10 = city_stats.sort_values('Final_Score', ascending=False).head(10)
-    fig_lead = px.bar(
-        top_10, x='Final_Score', y=city_col, orientation='h',
-        color='Final_Score', color_continuous_scale='Viridis',
-        labels={city_col: 'City', 'Final_Score': 'Opportunity Score'},
-        template="plotly_dark"
+    st.divider()
+
+    # ----------------------------
+    # Scenario Simulator (multi-shock presets) — INSIDE TAB
+    # ----------------------------
+    st.subheader("⚡ Scenario Simulator (What-if shocks)")
+    st.caption("Apply a realistic scenario (multiple drivers at once). Recomputes the weighted score; does not retrain a model.")
+
+    chosen = st.selectbox("Pick a metro", metro[METRO_COL].tolist(), index=0, key="scen_metro")
+    base_row = metro.loc[metro[METRO_COL] == chosen].iloc[0]
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Base Score", f"{base_row['Opportunity_Score']:.1f}")
+    c2.metric("Base Rank", f"{int(base_row['Rank'])}")
+    c3.metric("Window", f"{min_year}–{max_year}")
+
+    scenario_name = st.selectbox(
+        "Choose a scenario",
+        ["Tech boom", "Manufacturing decline", "Housing price spike", "Tech boom + Housing spike"],
+        key="scen_name",
     )
-    fig_lead.update_layout(yaxis={'categoryorder': 'total ascending'}, height=400)
-    st.plotly_chart(fig_lead, use_container_width=True)
-    st.caption("📌 Scores reflect a weighted combination of company growth and industry diversity.")
+    mag = st.slider("Magnitude (%)", 0, 20, 10, key="scen_mag")
+    X = mag / 100.0
 
-    st.divider()
-    st.subheader("⚡ What-If Shock Simulator")
-    col_s1, col_s2 = st.columns([1, 2])
-    with col_s1:
-        target_city = st.selectbox("Pick a City to Shock:", top_10[city_col].tolist())
-        shock_type = st.selectbox("Scenario:", [
-            "+20% Tech Growth",
-            "Manufacturing Decline (-15%)",
-            "Housing Spike (+10%)"
-        ])
-        if st.button("Run Simulation"):
-            base_score = city_stats.loc[city_stats[city_col] == target_city, 'Final_Score'].values[0]
-            sim_score = base_score * 1.2 if "+" in shock_type else base_score * 0.85
-            with col_s2:
-                st.write(f"### Result for {target_city}")
-                st.metric("Simulated Score", f"{sim_score:.1f}", delta=f"{sim_score - base_score:.1f}")
-                st.write(f"This shock would move **{target_city}** on the leaderboard relative to current weights.")
+    SCENARIOS = {
+        "Tech boom": {
+            "firms_founded_yoy_lag1q": +X,
+            "industry_count_new": +X,
+            "hhi_new": -X,
+        },
+        "Manufacturing decline": {
+            "firms_founded_yoy_lag1q": -X,
+            "industry_count_new": -X,
+            "hhi_new": +X,
+        },
+        "Housing price spike": {
+            "fhfa_yoy": +X,
+            "zillow_price_q": +X,
+        },
+        "Tech boom + Housing spike": {
+            "firms_founded_yoy_lag1q": +X,
+            "industry_count_new": +X,
+            "hhi_new": -X,
+            "fhfa_yoy": +X,
+            "zillow_price_q": +X,
+        },
+    }
 
-    st.divider()
-    if st.button("🎯 Generate Judge's Shortlist"):
-        st.subheader("Top 3 High-Conviction Cities")
-        final_3 = top_10.head(3)
-        cols = st.columns(3)
-        for i, (_, row) in enumerate(final_3.iterrows()):
-            city_name = row[city_col]
-            with cols[i]:
-                st.success(f"**{i+1}. {city_name}**")
-                st.write(f"**Score:** {row['Final_Score']:.1f}")
-                st.write(f"📈 **Growth:** {row['growth']:.2f}% avg")
-                st.write(f"🏭 **Diversity:** {row['diversity']:.0f} industries")
-                st.write(f"✅ **Why:** High industrial momentum.")
-                st.write(f"⚠️ **Risk:** Use as screening tool — validate with macro factors.")
-        st.caption("💡 These cities score highest given your current weight settings.")
+    shocks = {k: v for k, v in SCENARIOS[scenario_name].items() if k in STRAT_FEATURES}
+
+    def fmt_term(f, frac):
+        return f"{FEATURE_LABEL.get(f, f)} {frac*100:+.0f}%"
+
+    st.markdown("**Scenario:** " + (", ".join(fmt_term(k, v) for k, v in shocks.items()) if shocks else "No active features affected."))
+
+    metro_sim = metro.copy()
+    for f, frac in shocks.items():
+        metro_sim.loc[metro_sim[METRO_COL] == chosen, f] = metro_sim.loc[metro_sim[METRO_COL] == chosen, f].astype(float) * (1 + frac)
+
+    for f in shocks.keys():
+        base_series = metro_sim[f].astype(float).replace([np.inf, -np.inf], np.nan)
+        base_series = base_series.fillna(base_series.median())
+        new_norm = minmax(base_series)
+        if INVERT.get(f, False):
+            new_norm = 1 - new_norm
+        metro_sim[f + "_norm"] = new_norm
+
+    metro_sim["Opportunity_Score"] = 100 * sum(weights[f] * metro_sim[f + "_norm"] for f in STRAT_FEATURES)
+    metro_sim = metro_sim.sort_values("Opportunity_Score", ascending=False).reset_index(drop=True)
+    metro_sim["Rank"] = metro_sim.index + 1
+
+    sim_row = metro_sim.loc[metro_sim[METRO_COL] == chosen].iloc[0]
+
+    d1, d2, d3 = st.columns(3)
+    d1.metric("Simulated Score", f"{sim_row['Opportunity_Score']:.1f}", delta=f"{sim_row['Opportunity_Score'] - base_row['Opportunity_Score']:+.1f}")
+    d2.metric("Simulated Rank", f"{int(sim_row['Rank'])}", delta=f"{int(base_row['Rank']) - int(sim_row['Rank']):+d}")
+    d3.metric("Shock magnitude", f"{mag}%")
