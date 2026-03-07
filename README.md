@@ -1,5 +1,3 @@
-# FirmScape - write a description about the project after making the research question
-DATASETS: https://drive.google.com/drive/folders/10s8DfNQ36rqgW9ilG2tfTD06trYGhb0A?usp=sharing
 # 🏙️ FirmScape
 ### *Industry shifts move housing prices. We built the tool to see it coming.*
 
@@ -92,6 +90,7 @@ Each source is cleaned, aggregated by city + quarter, and joined into:
 
 **`merged_companies_housing.csv`** — simpler city-year panel used for baseline correlation analysis
 
+DATASETS: https://drive.google.com/drive/folders/10s8DfNQ36rqgW9ilG2tfTD06trYGhb0A?usp=sharing
 ---
 
 ## 🔄 How FirmScape Works
