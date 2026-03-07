@@ -10,15 +10,18 @@
 # Preview samples (first 100–500 rows of full CSVs; safe to commit)
 !data/previews/
 !data/previews/*.csv
-# macOS system files
+# macOS system files (root and any subfolder)
+.DS_Store
 *.DS_Store
+**/.DS_Store
 
 # Python
 __pycache__/
 *.pyc
 
-# Jupyter
+# Jupyter (checkpoints in repo root and any subfolder)
 .ipynb_checkpoints/
+**/.ipynb_checkpoints/
 
 # VS Code
 *.vscode/
