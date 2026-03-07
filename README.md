@@ -125,14 +125,7 @@ DATASETS: https://drive.google.com/drive/folders/10s8DfNQ36rqgW9ilG2tfTD06trYGhb
 - **Concentrated cities are fragile** — high HHI cities like Detroit show sharper boom-bust cycles
 - **Lag matters** — industry signals are often strongest 2–4 quarters *before* housing moves
 
-### **Model Journey**
-1. **Started with Pearson correlation** on annual data → signal present but noisy
-2. **Added lag testing** → confirmed industry *leads* housing in most cities, not just correlates
-3. **Tried regression** on raw `pct_change` → R² low but honest, no leakage
-4. **Pivoted to classification** (top 25% breakout) → AUC ~0.65, F1 ~0.58 ✅
-5. **Added 10-year forward classifier** → tests whether today's industry structure predicts decade-long trajectories
 
----
 
 ##  Limitations
 - All findings are **associative, not causal**
@@ -155,6 +148,20 @@ firmscape/
 ├── notebooks/                                  # Additional data prep
 └── README.md
 ```
+
+---
+
+### Requirements
+streamlit
+pandas
+numpy
+matplotlib
+seaborn
+plotly
+scipy
+scikit-learn
+xgboost
+
 
 ---
 
