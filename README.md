@@ -166,12 +166,12 @@ FirmScape/
 │   └── firmscape_deliverable.ipynb             # Full pipeline: cleaning, merge, modeling
 │
 ├── individual_notebooks/
-│   ├── build_and_clean_integrated_panel.ipynb  # Build integrated CBSA-quarterly panel
-│   ├── next_hub_scoring.ipynb                  # Next Hub composite scoring
-│   ├── correlation_timeseries.ipynb           # Correlation & time series
-│   ├── Zillow_data_cleaning.ipynb
-│   ├── Anusha's_partial_eda.ipynb
-│   └── aaronWongEDA.ipynb
+    ├── build_and_clean_integrated_panel.ipynb  # Build integrated CBSA-quarterly panel
+    ├── next_hub_scoring.ipynb                  # Next Hub composite scoring
+    ├── correlation_timeseries.ipynb           # Correlation & time series
+    ├── Zillow_data_cleaning.ipynb
+    ├── Anusha's_partial_eda.ipynb
+    └── aaronWongEDA.ipynb
 ```
 
 ---
