@@ -98,7 +98,22 @@ integrated_df, integrated_fname = load_integrated_data()
 # ─────────────────────────────────────────────
 @st.cache_data
 def load_zillow_msa_wide():
-    path = DATA_DIR / "Zillow_Housing_Dataset.csv"
+    candidates = [
+        DATA_DIR / "Zillow_Housing_Dataset.csv",
+        DATA_DIR / "zillow_housing_dataset.csv",
+        PROJECT_ROOT / "data" / "Zillow_Housing_Dataset.csv",
+        PROJECT_ROOT / "data" / "zillow_housing_dataset.csv",
+        Path("data/Zillow_Housing_Dataset.csv"),
+        Path("data/zillow_housing_dataset.csv"),
+    ]
+    path = next((p for p in candidates if p.exists()), None)
+    if path is None:
+        st.error(
+            "Missing Zillow dataset file. Expected `data/Zillow_Housing_Dataset.csv` in the repo. "
+            "Add/commit it (or rename to match exactly) and redeploy."
+        )
+        return pd.DataFrame()
+
     z = pd.read_csv(path)
     if "RegionType" in z.columns:
         z = z[z["RegionType"].astype(str).str.lower() == "msa"].copy()
