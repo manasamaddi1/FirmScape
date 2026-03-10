@@ -6,6 +6,7 @@
 !merged_companies_housing.csv
 !data/firmscape_integrated_quarterly_cleaned.csv
 !data/merged_companies_housing.csv
+!data/Zillow_Housing_Dataset.csv
 
 # Preview samples (first 100–500 rows of full CSVs; safe to commit)
 !data/previews/
