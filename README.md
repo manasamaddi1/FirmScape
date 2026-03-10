@@ -146,16 +146,16 @@ FirmScape/
 ├── Streamlit/
 │   └── app.py                                  # Streamlit dashboard (run: streamlit run Streamlit/app.py)
 │
-├── data/                                       # All CSVs (gitignored except the two below)
+├── data/                                       # All CSVs (gitignored except the three below)
 │   ├── firmscape_integrated_quarterly_cleaned.csv   # ⭐ Primary panel (tracked)
 │   ├── merged_companies_housing.csv                 # Baseline merged panel (tracked)
-│   ├── companies_sorted.csv
+│   ├── Zillow_Housing_Dataset.csv                   # Used as fallback for evidence graphs on dashboard 
 │   ├── companies-2023-q4-sm.csv
 │   ├── companies_us_100plus_clean.csv
 │   ├── hpi_at_metro.csv
 │   ├── cleaned_zillow_data.csv
 │   ├── cleaned_housing_data.csv
-│   ├── Zillow_Housing_Dataset.csv
+│   ├── companies_sorted.csv
 │   ├── kaggle_companies_cleaned.csv
 │   ├── us_companies_100plus.csv
 │   └── previews/                               # First 100–500 rows of each CSV (tracked)
