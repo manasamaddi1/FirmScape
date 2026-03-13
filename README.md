@@ -1,5 +1,6 @@
 # 🏙️ FirmScape
 ### *Industry shifts move housing prices. We built the tool to see it coming.*
+Link to FirmScape Streamlit App: https://firmscape-4xzlqrszsfqz69y2fqsmgg.streamlit.app/
 
 **Most housing booms don't happen overnight. FirmScape predicts which cities are about to heat up — before the market prices it in.**
 Using machine learning and 50 years of business registration and housing data, we analyze firm founding rates, industry concentration, and economic diversity to identify cities with sustained housing growth potential.
