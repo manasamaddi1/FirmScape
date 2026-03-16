@@ -65,10 +65,10 @@ Your browser will open automatically at `http://localhost:8501`
 
 | Metric | Regression (XGBoost) | Classification (Logistic) | Interpretation |
 |---|---|---|---|
-| **Val R²** | ~0.05–0.12 | — | Industry explains ~5–12% of housing variance |
-| **Val RMSE** | low | — | Average prediction error in % price change |
-| **Val AUC** | — | ~0.60–0.68 | Meaningfully ranks breakout cities vs. non-breakout |
-| **Val F1** | — | ~0.55–0.62 | Balanced precision and recall |
+| **Val R²** | ~0.27 | — | Industry explains ~27% of housing variance |
+| **Val RMSE** | low (weak) | — | Average prediction error in % price change |
+| **Val AUC** | — | ~0.81 | Meaningfully ranks breakout cities vs. non-breakout |
+| **Val F1** | — | ~0.70 | Balanced precision and recall |
 
 **Key Insight:** A low R² is *expected and honest* — housing prices are driven by interest rates, zoning, supply, and demographics too. Our goal isn't to overfit; it's to isolate how much industry structure alone explains, then use it as a leading indicator layered with other signals.
 
